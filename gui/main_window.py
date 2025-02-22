@@ -223,179 +223,204 @@ class MainWindow(QMainWindow):
         <head>
             <style>
                 body {{
-                    font-family: Arial, sans-serif;
+                    font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
                     margin: 20px;
                     color: #333;
+                    line-height: 1.4;
+                }}
+                .container {{
+                    max-width: 1000px;
+                    margin: 0 auto;
+                    border: 1px solid #ddd;
+                    padding: 20px;
+                    border-radius: 5px;
+                    background: #fff;
                 }}
                 .header {{
-                    text-align: center;
-                    margin-bottom: 30px;
-                    border-bottom: 2px solid #2c5282;
+                    border-bottom: 2px solid #1a75ff;
                     padding-bottom: 10px;
+                    margin-bottom: 20px;
                 }}
-                .title {{
-                    color: #2c5282;
+                .header h1 {{
+                    color: #1a75ff;
                     font-size: 24px;
-                    font-weight: bold;
-                    margin-bottom: 10px;
+                    margin: 0;
+                    padding: 0;
                 }}
-                .subtitle {{
-                    color: #4a5568;
-                    font-size: 16px;
+                .header .tipo-doc {{
+                    color: #666;
+                    font-size: 14px;
+                    margin-top: 5px;
                 }}
                 .section {{
-                    margin: 20px 0;
+                    margin: 15px 0;
                     padding: 15px;
-                    background-color: #f7fafc;
+                    background: #f8f9fa;
                     border-radius: 5px;
                 }}
-                .section-title {{
-                    color: #2c5282;
-                    font-size: 18px;
-                    font-weight: bold;
-                    margin-bottom: 15px;
-                    border-bottom: 1px solid #cbd5e0;
+                .section h2 {{
+                    color: #1a75ff;
+                    font-size: 16px;
+                    margin: 0 0 10px 0;
                     padding-bottom: 5px;
+                    border-bottom: 1px solid #ddd;
                 }}
-                .info-grid {{
+                .grid-container {{
                     display: grid;
                     grid-template-columns: repeat(2, 1fr);
                     gap: 20px;
                 }}
-                .info-box {{
-                    padding: 10px;
-                    background-color: white;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 4px;
+                .info-group {{
+                    margin-bottom: 10px;
+                }}
+                .info-label {{
+                    font-weight: bold;
+                    color: #666;
+                    font-size: 13px;
+                }}
+                .info-value {{
+                    margin-top: 2px;
+                    font-size: 14px;
                 }}
                 table {{
                     width: 100%;
                     border-collapse: collapse;
-                    margin: 20px 0;
-                    background-color: white;
+                    margin: 10px 0;
                 }}
                 th {{
-                    background-color: #2c5282;
+                    background: #1a75ff;
                     color: white;
-                    padding: 12px;
+                    padding: 8px;
                     text-align: left;
+                    font-size: 14px;
                 }}
                 td {{
-                    padding: 10px;
-                    border-bottom: 1px solid #e2e8f0;
+                    padding: 8px;
+                    border-bottom: 1px solid #ddd;
+                    font-size: 14px;
                 }}
                 tr:nth-child(even) {{
-                    background-color: #f7fafc;
+                    background: #f8f9fa;
                 }}
-                .totals {{
+                .totali {{
                     margin-top: 20px;
                     text-align: right;
+                }}
+                .totali-row {{
+                    display: flex;
+                    justify-content: flex-end;
+                    margin: 5px 0;
+                }}
+                .totali-label {{
                     font-weight: bold;
+                    margin-right: 20px;
+                    min-width: 150px;
+                    text-align: right;
                 }}
-                .totals-table {{
-                    width: auto;
-                    margin-left: auto;
-                }}
-                .totals-table td {{
-                    padding: 5px 15px;
-                }}
-                .label {{
-                    color: #4a5568;
-                    font-weight: bold;
-                }}
-                .value {{
-                    color: #2d3748;
+                .totali-value {{
+                    min-width: 100px;
+                    text-align: right;
                 }}
             </style>
         </head>
         <body>
-            <div class="header">
-                <div class="title">FATTURA ELETTRONICA</div>
-                <div class="subtitle">
-                    Numero: {invoice_data['header']['numero']} del {invoice_data['header']['data']}<br>
-                    Tipo documento: {invoice_data['header']['tipo_documento']}
+            <div class="container">
+                <div class="header">
+                    <h1>FATTURA ELETTRONICA</h1>
+                    <div class="tipo-doc">
+                        Numero: {invoice_data['header']['numero']} del {invoice_data['header']['data']}<br>
+                        Tipo documento: {invoice_data['header']['tipo_documento']}
+                    </div>
                 </div>
-            </div>
 
-            <div class="info-grid">
-                <div class="section">
-                    <div class="section-title">CEDENTE/PRESTATORE</div>
-                    <div class="info-box">
-                        <div class="label">Denominazione:</div>
-                        <div class="value">{invoice_data['supplier']['denominazione']}</div>
-                        <div class="label">Partita IVA:</div>
-                        <div class="value">{invoice_data['supplier']['partita_iva']}</div>
-                        <div class="label">Indirizzo:</div>
-                        <div class="value">
-                            {invoice_data['supplier']['indirizzo']}<br>
-                            {invoice_data['supplier']['cap']} {invoice_data['supplier']['citta']} ({invoice_data['supplier']['provincia']})
+                <div class="grid-container">
+                    <div class="section">
+                        <h2>CEDENTE/PRESTATORE</h2>
+                        <div class="info-group">
+                            <div class="info-label">Denominazione:</div>
+                            <div class="info-value">{invoice_data['supplier']['denominazione']}</div>
+                        </div>
+                        <div class="info-group">
+                            <div class="info-label">Partita IVA:</div>
+                            <div class="info-value">{invoice_data['supplier']['partita_iva']}</div>
+                        </div>
+                        <div class="info-group">
+                            <div class="info-label">Indirizzo:</div>
+                            <div class="info-value">
+                                {invoice_data['supplier']['indirizzo']}<br>
+                                {invoice_data['supplier']['cap']} {invoice_data['supplier']['citta']} ({invoice_data['supplier']['provincia']})
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2>CESSIONARIO/COMMITTENTE</h2>
+                        <div class="info-group">
+                            <div class="info-label">Denominazione:</div>
+                            <div class="info-value">{invoice_data['customer']['denominazione']}</div>
+                        </div>
+                        <div class="info-group">
+                            <div class="info-label">Partita IVA:</div>
+                            <div class="info-value">{invoice_data['customer']['partita_iva']}</div>
+                        </div>
+                        <div class="info-group">
+                            <div class="info-label">Indirizzo:</div>
+                            <div class="info-value">
+                                {invoice_data['customer']['indirizzo']}<br>
+                                {invoice_data['customer']['cap']} {invoice_data['customer']['citta']} ({invoice_data['customer']['provincia']})
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="section">
-                    <div class="section-title">CESSIONARIO/COMMITTENTE</div>
-                    <div class="info-box">
-                        <div class="label">Denominazione:</div>
-                        <div class="value">{invoice_data['customer']['denominazione']}</div>
-                        <div class="label">Partita IVA:</div>
-                        <div class="value">{invoice_data['customer']['partita_iva']}</div>
-                        <div class="label">Indirizzo:</div>
-                        <div class="value">
-                            {invoice_data['customer']['indirizzo']}<br>
-                            {invoice_data['customer']['cap']} {invoice_data['customer']['citta']} ({invoice_data['customer']['provincia']})
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-title">DETTAGLIO DOCUMENTO</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Descrizione</th>
-                            <th>Quantità</th>
-                            <th>Prezzo Unitario</th>
-                            <th>Importo</th>
-                            <th>IVA %</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                    <h2>DATI BENI/SERVIZI</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Descrizione</th>
+                                <th>Quantità</th>
+                                <th>Prezzo Unitario</th>
+                                <th>Importo</th>
+                                <th>IVA %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
         """
 
         for item in invoice_data['items']:
             html += f"""
-                        <tr>
-                            <td>{item['descrizione']}</td>
-                            <td>{item['quantita']}</td>
-                            <td>€ {item['prezzo_unitario']:.2f}</td>
-                            <td>€ {item['importo']:.2f}</td>
-                            <td>{item['aliquota_iva']}%</td>
-                        </tr>
+                            <tr>
+                                <td>{item['descrizione']}</td>
+                                <td>{item['quantita']}</td>
+                                <td>€ {item['prezzo_unitario']:.2f}</td>
+                                <td>€ {item['importo']:.2f}</td>
+                                <td>{item['aliquota_iva']}%</td>
+                            </tr>
             """
 
         html += f"""
-                    </tbody>
-                </table>
-            </div>
+                        </tbody>
+                    </table>
+                </div>
 
-            <div class="section">
-                <div class="section-title">RIEPILOGO IVA E TOTALI</div>
-                <table class="totals-table">
-                    <tr>
-                        <td class="label">Imponibile:</td>
-                        <td class="value">€ {invoice_data['totals']['imponibile']:.2f}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">IVA:</td>
-                        <td class="value">€ {invoice_data['totals']['imposta']:.2f}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">Totale Documento:</td>
-                        <td class="value">€ {invoice_data['totals']['imponibile'] + invoice_data['totals']['imposta']:.2f}</td>
-                    </tr>
-                </table>
+                <div class="section">
+                    <h2>RIEPILOGO IVA E TOTALI</h2>
+                    <div class="totali">
+                        <div class="totali-row">
+                            <div class="totali-label">Imponibile:</div>
+                            <div class="totali-value">€ {invoice_data['totals']['imponibile']:.2f}</div>
+                        </div>
+                        <div class="totali-row">
+                            <div class="totali-label">IVA:</div>
+                            <div class="totali-value">€ {invoice_data['totals']['imposta']:.2f}</div>
+                        </div>
+                        <div class="totali-row">
+                            <div class="totali-label">Totale Documento:</div>
+                            <div class="totali-value">€ {invoice_data['totals']['imponibile'] + invoice_data['totals']['imposta']:.2f}</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </body>
         </html>
