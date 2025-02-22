@@ -1,0 +1,20 @@
+#IDE
+.idea/
+.vscode/
+
+#Virtual Environment
+venv/
+
+# Dist folder
+dist/
+
+# Build folder
+build/
+
+# PyInstaller
+*.spec
+
+# PyInstaller cache
+*.spec
+
+
