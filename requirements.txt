@@ -1,5 +1,4 @@
-PyQt6
-PyQt6-Qt6
-PyQt6-sip
-asn1crypto
-cryptography 
+PyQt6==6.6.1
+py2app==0.28.7
+asn1crypto==1.5.1
+cryptography==41.0.7 
