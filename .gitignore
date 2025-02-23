@@ -23,5 +23,5 @@ __pycache__/
 #wkhtmltopdf
 bin/
 
-#macOS specific
+#macOS specific files
 .DS_Store
