@@ -9,7 +9,7 @@ DATA_FILES = [
 ]
 OPTIONS = {
     'argv_emulation': True,
-    'iconfile': 'assets/icon.icns',
+    'iconfile': 'assets/icona.icns',
     'plist': {
         'CFBundleName': 'FatturaPro',
         'CFBundleDisplayName': 'FatturaPro',
@@ -20,7 +20,8 @@ OPTIONS = {
         'NSHumanReadableCopyright': "© 2025 Emmanuele Pani",
         'NSHighResolutionCapable': True,
         'LSMinimumSystemVersion': "13.0.0",
-        'LSApplicationCategoryType': 'public.app-category.business'
+        'LSApplicationCategoryType': 'public.app-category.business',
+        'PyRuntimeLocations': ['/Library/Frameworks/Python.framework/Versions/3.12/bin/python3']
     }
 }
 
