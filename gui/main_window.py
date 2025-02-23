@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
                            QPushButton, QFileDialog, QTextEdit, QMenuBar, QMenu, QMessageBox, QHBoxLayout)
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QKeySequence, QDragEnterEvent, QDropEvent
+from PyQt6.QtCore import Qt, QSizeF, QMarginsF
+from PyQt6.QtGui import QAction, QKeySequence, QDragEnterEvent, QDropEvent, QPageSize, QPageLayout
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from PyQt6.QtPrintSupport import QPrinter, QPrintDialog
@@ -11,6 +11,8 @@ import json
 from utils.p7m_handler import P7MHandler
 from gui.info_dialog import InfoDialog
 from gui.settings_dialog import SettingsDialog
+from utils.pdf_layout import PDFLayout
+import pdfkit
 
 class MainWindow(QMainWindow):
     def __init__(self, theme_manager):
@@ -205,8 +207,9 @@ class MainWindow(QMainWindow):
             parser = InvoiceParser()
             invoice_data = parser.parse_invoice(xml_content)
             
-            # Formatta i dati della fattura in HTML
-            html_content = self._format_invoice_html(invoice_data)
+            # Usa PDFLayout per generare l'HTML
+            pdf_layout = PDFLayout()
+            html_content = pdf_layout.generate_invoice_html(invoice_data)
             
             # Aggiungi le informazioni sulla firma se presenti
             if signature_html:
@@ -463,13 +466,14 @@ class MainWindow(QMainWindow):
         )
         
         if file_name:
-            printer = QPrinter()
-            printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
-            printer.setOutputFileName(file_name)
+            # Ottieni l'HTML dal viewer
+            html_content = self.viewer.toHtml()
             
-            document = QTextDocument()
-            document.setHtml(self.viewer.toHtml())
-            document.print(printer)
+            # Configura pdfkit per utilizzare wkhtmltopdf
+            config = pdfkit.configuration(wkhtmltopdf='bin/wkhtmltopdf')  # Usa il percorso relativo
+            
+            # Genera il PDF
+            pdfkit.from_string(html_content, file_name, configuration=config, options={'quiet': ''})
     
     def print_invoice(self):
         if not self.viewer.toPlainText():

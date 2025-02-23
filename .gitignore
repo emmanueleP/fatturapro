@@ -19,3 +19,6 @@ build/
 
 #Python specific folders
 __pycache__/
+
+#wkhtmltopdf
+bin/

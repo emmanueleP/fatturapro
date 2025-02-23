@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QTextBrowser, 
-                           QPushButton, QDialogButtonBox)
+                           QPushButton, QDialogButtonBox, QHBoxLayout)
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QPixmap
 
 class InfoDialog(QDialog):
     def __init__(self, parent=None):
@@ -16,6 +16,7 @@ class InfoDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(20)  # Spaziatura macOS-style
         layout.setContentsMargins(20, 20, 20, 20)  # Margini macOS-style
+        
         
         info_text = """
         <style>

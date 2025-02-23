@@ -4,7 +4,8 @@ APP = ['main.py']
 DATA_FILES = [
     ('assets', ['assets/main.png']),
     ('utils', ['utils/invoice_parser.py', 'utils/p7m_handler.py', 'utils/theme_manager.py']),
-    ('gui', ['gui/main_window.py', 'gui/info_dialog.py', 'gui/settings_dialog.py'])
+    ('gui', ['gui/main_window.py', 'gui/info_dialog.py', 'gui/settings_dialog.py']),
+    ('bin', ['bin/wkhtmltopdf'])
 ]
 OPTIONS = {
     'argv_emulation': True,
