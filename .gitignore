@@ -28,3 +28,6 @@ bin/
 
 #dmg file
 *.dmg
+
+#Other
+.eggs/
