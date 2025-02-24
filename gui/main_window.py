@@ -13,11 +13,16 @@ from gui.info_dialog import InfoDialog
 from gui.settings_dialog import SettingsDialog
 from utils.pdf_layout import PDFLayout
 import pdfkit
+import os
+import sys
+import tempfile
+from utils.print_manager import PrintManager
 
 class MainWindow(QMainWindow):
     def __init__(self, theme_manager):
         super().__init__()
-        self.theme_manager = theme_manager  # Salva il riferimento al theme_manager
+        self.theme_manager = theme_manager
+        self.print_manager = PrintManager(self)  # Crea il PrintManager
         self.setup_ui()
         self.setAcceptDrops(True)  # Abilita drag & drop
         
@@ -205,11 +210,11 @@ class MainWindow(QMainWindow):
                 signature_html = ""
             
             parser = InvoiceParser()
-            invoice_data = parser.parse_invoice(xml_content)
+            self.current_invoice_data = parser.parse_invoice(xml_content)  # Salva i dati
             
             # Usa PDFLayout per generare l'HTML
             pdf_layout = PDFLayout()
-            html_content = pdf_layout.generate_invoice_html(invoice_data)
+            html_content = pdf_layout.generate_invoice_html(self.current_invoice_data)
             
             # Aggiungi le informazioni sulla firma se presenti
             if signature_html:
@@ -469,23 +474,35 @@ class MainWindow(QMainWindow):
             # Ottieni l'HTML dal viewer
             html_content = self.viewer.toHtml()
             
+            # Ottieni il percorso corretto di wkhtmltopdf
+            if getattr(sys, 'frozen', False):
+                # Se l'app è in bundle (installata)
+                bundle_dir = sys._MEIPASS
+                wkhtmltopdf_path = os.path.join(bundle_dir, 'bin', 'wkhtmltopdf')
+            else:
+                # Se l'app è in sviluppo
+                wkhtmltopdf_path = 'bin/wkhtmltopdf'
+            
             # Configura pdfkit per utilizzare wkhtmltopdf
-            config = pdfkit.configuration(wkhtmltopdf='bin/wkhtmltopdf')  # Usa il percorso relativo
+            config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
             
             # Genera il PDF
-            pdfkit.from_string(html_content, file_name, configuration=config, options={'quiet': ''})
+            try:
+                pdfkit.from_string(html_content, file_name, configuration=config, options={'quiet': ''})
+            except Exception as e:
+                QMessageBox.critical(self, "Errore", f"Errore durante la creazione del PDF: {str(e)}")
     
     def print_invoice(self):
         if not self.viewer.toPlainText():
             return
             
-        printer = QPrinter()
-        dialog = QPrintDialog(printer, self)
+        # Ottieni le informazioni sulla firma se presenti
+        signature_html = None
+        if hasattr(self, 'current_signature_info'):
+            signature_html = self._format_signature_info(self.current_signature_info)
         
-        if dialog.exec() == QPrintDialog.DialogCode.Accepted:
-            document = QTextDocument()
-            document.setHtml(self.viewer.toHtml())
-            document.print(printer)
+        # Usa l'istanza di PrintManager creata nell'init
+        self.print_manager.print_document(self.current_invoice_data, signature_html)
     
     # Gestione Drag & Drop
     def dragEnterEvent(self, event: QDragEnterEvent):
