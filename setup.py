@@ -9,7 +9,7 @@ DATA_FILES = [
 ]
 OPTIONS = {
     'argv_emulation': True,
-    'iconfile': 'assets/icona.icns',
+    'iconfile': 'assets/icon.icns',
     'plist': {
         'CFBundleName': 'FatturaPro',
         'CFBundleDisplayName': 'FatturaPro',
