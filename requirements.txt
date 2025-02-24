@@ -1,5 +1,6 @@
 PyQt6==6.5.0
-py2app==0.28.7
+pyinstaller==6.4.0
 asn1crypto==1.5.1
 cryptography==41.0.7
 pdfkit==1.0.0
+setuptools==75.8.0
