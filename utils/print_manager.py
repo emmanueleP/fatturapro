@@ -19,86 +19,81 @@ class PrintManager:
 
         printer = QPrinter()
         printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
-        printer.setPageMargins(QMarginsF(10, 10, 10, 10), QPageLayout.Unit.Millimeter)
+        printer.setPageMargins(QMarginsF(0, 0, 0, 0), QPageLayout.Unit.Millimeter)
 
         dialog = QPrintDialog(printer, self.parent)
         if dialog.exec() == QPrintDialog.DialogCode.Accepted:
             try:
                 painter = QPainter()
                 painter.begin(printer)
-                
+
                 # Imposta i font
                 titleFont = QFont("Arial", 11, QFont.Weight.Bold)
                 headerFont = QFont("Arial", 11, QFont.Weight.Bold)
                 normalFont = QFont("Arial", 11)
-                
+
                 # Area di stampa
                 pageRect = printer.pageRect(QPrinter.Unit.DevicePixel)
                 width = int(pageRect.width())
-                currentY = 50
-                
+                currentY = 20  # Margine superiore iniziale
+
                 # Titolo
                 painter.setFont(titleFont)
-                # Rettangolo grigio per il titolo
-                painter.fillRect(0, currentY-10, width, 40, Qt.GlobalColor.lightGray)
+                painter.fillRect(0, currentY - 10, width, 40, Qt.GlobalColor.lightGray)
                 painter.drawText(0, currentY, width, 30, Qt.AlignmentFlag.AlignCenter, "FATTURA ELETTRONICA")
                 currentY += 40
-                
+
                 # Numero fattura e data
                 painter.setFont(normalFont)
                 text = f"Numero: {invoice_data['header']['numero']} del {invoice_data['header']['data']}\n"
                 text += f"Tipo documento: {invoice_data['header']['tipo_documento']}"
-                painter.drawText(50, currentY, width-100, 40, Qt.AlignmentFlag.AlignLeft, text)
+                painter.drawText(50, currentY, width - 100, 40, Qt.AlignmentFlag.AlignLeft, text)
                 currentY += 60
-                
+
                 # Cedente e Cessionario affiancati
                 painter.setFont(headerFont)
                 leftCol = 50
-                rightCol = int(width/2 + 50)
-                colWidth = int(width/2 - 100)
-                
-                # Rettangoli grigi per le intestazioni
-                painter.fillRect(leftCol-5, currentY-5, colWidth+10, 35, Qt.GlobalColor.lightGray)
-                painter.fillRect(rightCol-5, currentY-5, colWidth+10, 35, Qt.GlobalColor.lightGray)
-                
+                rightCol = int(width / 2 + 50)
+                colWidth = int(width / 2 - 100)
+
                 # Cedente
+                painter.fillRect(leftCol - 5, currentY - 5, colWidth + 10, 35, Qt.GlobalColor.lightGray)
                 painter.drawText(leftCol, currentY, colWidth, 30, Qt.AlignmentFlag.AlignLeft, "CEDENTE/PRESTATORE")
                 painter.setFont(normalFont)
                 text = f"Denominazione: {invoice_data['supplier']['denominazione']}\n"
                 text += f"Partita IVA: {invoice_data['supplier']['partita_iva']}\n"
                 text += f"Indirizzo: {invoice_data['supplier']['indirizzo']}\n"
                 text += f"{invoice_data['supplier']['cap']} {invoice_data['supplier']['citta']} ({invoice_data['supplier']['provincia']})"
-                painter.drawText(leftCol, currentY+30, colWidth, 80, Qt.AlignmentFlag.AlignLeft, text)
-                
+                painter.drawText(leftCol, currentY + 30, colWidth, 80, Qt.AlignmentFlag.AlignLeft, text)
+
                 # Cessionario
                 painter.setFont(headerFont)
+                painter.fillRect(rightCol - 5, currentY - 5, colWidth + 10, 35, Qt.GlobalColor.lightGray)
                 painter.drawText(rightCol, currentY, colWidth, 30, Qt.AlignmentFlag.AlignLeft, "CESSIONARIO/COMMITTENTE")
                 painter.setFont(normalFont)
                 text = f"Denominazione: {invoice_data['customer']['denominazione']}\n"
                 text += f"Partita IVA: {invoice_data['customer']['partita_iva']}\n"
                 text += f"Indirizzo: {invoice_data['customer']['indirizzo']}\n"
                 text += f"{invoice_data['customer']['cap']} {invoice_data['customer']['citta']} ({invoice_data['customer']['provincia']})"
-                painter.drawText(rightCol, currentY+30, colWidth, 80, Qt.AlignmentFlag.AlignLeft, text)
-                currentY += 130
-                
+                painter.drawText(rightCol, currentY + 30, colWidth, 80, Qt.AlignmentFlag.AlignLeft, text)
+
+                currentY += 130  # Spazio dopo cedente e cessionario
+
                 # Tabella dati
                 painter.setFont(headerFont)
-                # Rettangolo grigio per l'intestazione della tabella
-                painter.fillRect(45, currentY-5, width-90, 35, Qt.GlobalColor.lightGray)
-                painter.drawText(50, currentY, width-100, 30, Qt.AlignmentFlag.AlignLeft, "DATI BENI/SERVIZI")
+                painter.drawText(50, currentY, width - 100, 30, Qt.AlignmentFlag.AlignLeft, "DATI BENI/SERVIZI")
                 currentY += 30
-                
+
                 # Intestazione tabella
-                colWidths = [int(width*0.4), int(width*0.1), int(width*0.15), int(width*0.15), int(width*0.1)]
+                colWidths = [int(width * 0.4), int(width * 0.1), int(width * 0.15), int(width * 0.15), int(width * 0.1)]
                 headers = ["Descrizione", "Quantità", "Prezzo Unit.", "Importo", "IVA %"]
                 x = 50
-                # Rettangolo grigio per le intestazioni delle colonne
-                painter.fillRect(45, currentY-5, width-90, 30, Qt.GlobalColor.lightGray)
                 for i, header in enumerate(headers):
-                    painter.drawText(x, currentY, colWidths[i], 25, Qt.AlignmentFlag.AlignLeft, header)
+                    painter.fillRect(x, currentY, colWidths[i], 30, Qt.GlobalColor.lightGray)  # Righe grigie
+                    painter.drawText(x, currentY, colWidths[i], 30, Qt.AlignmentFlag.AlignLeft, header)
                     x += colWidths[i]
-                currentY += 25
-                
+                currentY += 30
+
                 # Righe tabella
                 painter.setFont(normalFont)
                 for item in invoice_data['items']:
@@ -113,23 +108,22 @@ class PrintManager:
                     x += colWidths[3]
                     painter.drawText(x, currentY, colWidths[4], 20, Qt.AlignmentFlag.AlignRight, f"{item['aliquota_iva']}%")
                     currentY += 20
-                
+
                 # Totali
                 currentY += 20
                 totaleWidth = 200
                 x = width - totaleWidth - 50
                 painter.setFont(headerFont)
-                # Rettangolo grigio per i totali
-                painter.fillRect(x-5, currentY-5, totaleWidth+10, 65, Qt.GlobalColor.lightGray)
+                painter.fillRect(x - 5, currentY - 5, totaleWidth + 10, 65, Qt.GlobalColor.lightGray)  # Righe grigie
                 painter.drawText(x, currentY, totaleWidth, 20, Qt.AlignmentFlag.AlignRight, f"Imponibile: € {invoice_data['totals']['imponibile']:.2f}")
                 currentY += 20
                 painter.drawText(x, currentY, totaleWidth, 20, Qt.AlignmentFlag.AlignRight, f"IVA: € {invoice_data['totals']['imposta']:.2f}")
                 currentY += 20
                 totale = invoice_data['totals']['imponibile'] + invoice_data['totals']['imposta']
                 painter.drawText(x, currentY, totaleWidth, 20, Qt.AlignmentFlag.AlignRight, f"Totale: € {totale:.2f}")
-                
+
                 painter.end()
-                
+
             except Exception as e:
                 QMessageBox.critical(self.parent, "Errore", f"Errore durante la stampa: {str(e)}")
 
