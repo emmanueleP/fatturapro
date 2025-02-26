@@ -2,7 +2,7 @@
 
 FatturaPro è un visualizzatore di fatture elettroniche moderno e intuitivo per macOS. Permette di visualizzare, convertire in PDF e stampare fatture elettroniche in formato XML e P7M. L'idea di creare quest'app nasce dalla quasi completa mancanza di software specifico per macOS per visualizzare le fatture elettroniche.
 
-![Screenshot dell'applicazione](assets/main.png)
+![Screenshot dell'applicazione](assets/icon_256x256.png)
 
 ## Caratteristiche
 
