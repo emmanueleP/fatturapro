@@ -17,6 +17,8 @@ import os
 import sys
 import tempfile
 from utils.print_manager import PrintManager
+from utils.menu_manager import MenuManager  # Importa il MenuManager
+from gui.manual_dialog import ManualDialog  # Importa il ManualDialog
 
 class MainWindow(QMainWindow):
     def __init__(self, theme_manager):
@@ -26,12 +28,13 @@ class MainWindow(QMainWindow):
         self.setup_ui()
         self.setAcceptDrops(True)  # Abilita drag & drop
         
+        # Crea il menu
+        self.menu_manager = MenuManager(self)  # Crea il MenuManager
+        self.setMenuBar(self.menu_manager.get_menu_bar())  # Imposta la barra dei menu
+        
     def setup_ui(self):
         self.setWindowTitle("FatturaPro - Visualizzatore Fatture Elettroniche")
         self.setMinimumSize(800, 600)
-        
-        # Menu Bar
-        self.create_menu_bar()
         
         # Widget centrale
         central_widget = QWidget()
@@ -105,81 +108,28 @@ class MainWindow(QMainWindow):
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
                 background: none;
             }
-            /* Stile orizzontale */
-            QScrollBar:horizontal {
-                border: none;
-                background: transparent;
-                height: 14px;
-                margin: 0;
-            }
-            QScrollBar::handle:horizontal {
-                background-color: #a1a1a1;
-                min-width: 30px;
-                border-radius: 7px;
-                margin: 2px;
-            }
-            QScrollBar::handle:horizontal:hover {
-                background-color: #7d7d7d;
-            }
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-                width: 0px;
-            }
-            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
-                background: none;
-            }
         """)
         
-        # Aggiungi i widget al layout principale
+        # Aggiungi i pulsanti e il viewer al layout
         layout.addLayout(button_layout)
-        layout.addWidget(self.viewer)  # Aggiunto il viewer al layout
-        
-        # Connetti i segnali
-        self.btn_open.clicked.connect(self.open_file)
+        layout.addWidget(self.viewer)
+
+        # Collega i pulsanti alle funzioni
+        self.btn_open.clicked.connect(self.open_invoice)
         self.btn_save_pdf.clicked.connect(self.save_as_pdf)
         self.btn_print.clicked.connect(self.print_invoice)
-        
-    def create_menu_bar(self):
-        menubar = self.menuBar()
-        
-        # Menu File
-        file_menu = menubar.addMenu("File")
-        
-        # Azione Apri
-        open_action = QAction("Apri", self)
-        open_action.setShortcut(QKeySequence("Ctrl+O"))
-        open_action.triggered.connect(self.open_file)
-        file_menu.addAction(open_action)
-        
-        file_menu.addSeparator()
-        
-        # Azione Esci
-        exit_action = QAction("Esci", self)
-        exit_action.setShortcut(QKeySequence("Ctrl+Q"))
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
-        
-        # Menu Strumenti
-        tools_menu = menubar.addMenu("Strumenti")
-        
-        settings_action = QAction("Impostazioni", self)
-        settings_action.triggered.connect(self.show_settings)
-        tools_menu.addAction(settings_action)
-        
-        # Menu Info
-        info_menu = menubar.addMenu("Info")
-        
-        # Azione Informazioni
-        info_action = QAction("Informazioni", self)
-        info_action.triggered.connect(self.show_info)
-        info_menu.addAction(info_action)
-    
+
     def show_info(self):
-        dialog = InfoDialog(self)
-        dialog.exec()
+        info_dialog = InfoDialog(self)
+        info_dialog.exec()
     
     def show_settings(self):
         dialog = SettingsDialog(self.theme_manager, self)
         dialog.exec()
+    
+    def show_manual(self):
+        manual_dialog = ManualDialog(self)
+        manual_dialog.exec()
         
     def open_file(self):
         file_name, _ = QFileDialog.getOpenFileName(
@@ -515,3 +465,16 @@ class MainWindow(QMainWindow):
             if file_path.lower().endswith(('.xml', '.p7m')):
                 self.load_xml(file_path)
                 break 
+
+    def open_invoice(self):
+        """Apre un file XML o P7M e lo carica nel visualizzatore."""
+        file_name, _ = QFileDialog.getOpenFileName(self, "Apri Fattura", "", "Fatture (*.xml *.p7m)")
+        if file_name:
+            self.load_invoice(file_name)
+
+    def load_invoice(self, file_path):
+        """Carica e visualizza la fattura dal file specificato."""
+        with open(file_path, 'rb') as file:
+            content = file.read()
+            invoice_data = InvoiceParser().parse_invoice(content)
+            self.viewer.setHtml(PDFLayout().generate_invoice_html(invoice_data)) 

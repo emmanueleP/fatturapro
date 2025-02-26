@@ -10,14 +10,19 @@ class InfoDialog(QDialog):
         
     def setup_ui(self):
         self.setWindowTitle("Informazioni")
-        self.setMinimumSize(500, 400)
+        self.setMinimumSize(600, 450) 
         
         # Layout principale
         layout = QVBoxLayout(self)
         layout.setSpacing(20)  # Spaziatura macOS-style
         layout.setContentsMargins(20, 20, 20, 20)  # Margini macOS-style
         
-        
+        # Aggiungi l'icona dell'app
+        icon = QPixmap("assets/icon.icns")  
+        icon_label = QLabel()
+        icon_label.setPixmap(icon.scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio)) #dimensione icona
+        layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
         info_text = """
         <style>
             body {
