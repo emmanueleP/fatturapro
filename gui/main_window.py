@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
                            QPushButton, QFileDialog, QTextEdit, QMenuBar, QMenu, QMessageBox, QHBoxLayout)
-from PyQt6.QtCore import Qt, QSizeF, QMarginsF
+from PyQt6.QtCore import Qt, QSizeF, QMarginsF, QSettings
 from PyQt6.QtGui import QAction, QKeySequence, QDragEnterEvent, QDropEvent, QPageSize, QPageLayout
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -25,6 +25,11 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.theme_manager = theme_manager
         self.print_manager = PrintManager(self)  # Crea il PrintManager
+        self.current_invoice_data = None  # Aggiungi questa riga
+        
+        # Inizializza le impostazioni
+        self.settings = QSettings('Emmanuele', 'Fatture')
+        
         self.setup_ui()
         self.setAcceptDrops(True)  # Abilita drag & drop
         
@@ -443,16 +448,11 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Errore", f"Errore durante la creazione del PDF: {str(e)}")
     
     def print_invoice(self):
-        if not self.viewer.toPlainText():
-            return
-            
-        # Ottieni le informazioni sulla firma se presenti
-        signature_html = None
-        if hasattr(self, 'current_signature_info'):
-            signature_html = self._format_signature_info(self.current_signature_info)
-        
-        # Usa l'istanza di PrintManager creata nell'init
-        self.print_manager.print_document(self.current_invoice_data, signature_html)
+        if self.current_invoice_data:  # Verifica che ci siano dati da stampare
+            signature_html = None  # Qui puoi aggiungere il codice per la firma se necessario
+            self.print_manager.print_document(self.current_invoice_data, signature_html)
+        else:
+            QMessageBox.warning(self, "Attenzione", "Nessuna fattura caricata da stampare")
     
     # Gestione Drag & Drop
     def dragEnterEvent(self, event: QDragEnterEvent):
@@ -474,7 +474,68 @@ class MainWindow(QMainWindow):
 
     def load_invoice(self, file_path):
         """Carica e visualizza la fattura dal file specificato."""
-        with open(file_path, 'rb') as file:
-            content = file.read()
-            invoice_data = InvoiceParser().parse_invoice(content)
-            self.viewer.setHtml(PDFLayout().generate_invoice_html(invoice_data)) 
+        try:
+            # Leggi il contenuto del file
+            with open(file_path, 'rb') as file:
+                content = file.read()
+
+            # Se è un file P7M, estrai il contenuto XML
+            if file_path.lower().endswith('.p7m'):
+                p7m_handler = P7MHandler()
+                content = p7m_handler.extract_xml_from_p7m(content)
+
+            # Parsa il contenuto XML
+            invoice_parser = InvoiceParser()
+            invoice_data = invoice_parser.parse_invoice(content)
+            
+            # Salva i dati della fattura corrente
+            self.current_invoice_data = invoice_data  # Aggiungi questa riga
+            
+            # Mostra la fattura nel viewer
+            self.viewer.setHtml(PDFLayout().generate_invoice_html(invoice_data))
+            
+            # Abilita i pulsanti dopo il caricamento
+            self.btn_save_pdf.setEnabled(True)
+            self.btn_print.setEnabled(True)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Errore", f"Errore nel caricamento della fattura: {str(e)}")
+
+    def open_file(self):
+        file_name, _ = QFileDialog.getOpenFileName(
+            self,
+            "Seleziona Fattura XML",
+            "",
+            "File XML (*.xml);;File P7M (*.p7m)"
+        )
+        if file_name:
+            self.load_xml(file_name)
+
+    def open_recent_file(self, file_path):
+        if os.path.exists(file_path):
+            # Apri il file
+            self.load_invoice_from_file(file_path)
+            # Aggiorna la lista dei file recenti
+            self.add_to_recent_files(file_path)
+        else:
+            QMessageBox.warning(self, "File non trovato",
+                              f"Il file {file_path} non esiste più.")
+            # Rimuovi il file dalla lista dei recenti
+            self.remove_from_recent_files(file_path)
+
+    def add_to_recent_files(self, file_path):
+        recent_files = self.settings.value("recent_files", [])
+        if file_path in recent_files:
+            recent_files.remove(file_path)
+        recent_files.insert(0, file_path)
+        # Mantieni solo gli ultimi 10 file
+        recent_files = recent_files[:10]
+        self.settings.setValue("recent_files", recent_files)
+        self.menu_manager.update_recent_files()
+
+    def remove_from_recent_files(self, file_path):
+        recent_files = self.settings.value("recent_files", [])
+        if file_path in recent_files:
+            recent_files.remove(file_path)
+            self.settings.setValue("recent_files", recent_files)
+            self.menu_manager.update_recent_files() 

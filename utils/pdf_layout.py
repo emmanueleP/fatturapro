@@ -64,25 +64,27 @@ class PDFLayout:
                     margin-top: 2px;
                     font-size: 14px;
                 }}
+                .payment-info {{
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 15px;
+                }}
                 table {{
                     width: 100%;
                     border-collapse: collapse;
                     margin: 10px 0;
                 }}
                 th {{
-                    background: #ccc;
-                    color: black;
+                    background: #f0f0f0;
                     padding: 8px;
                     text-align: left;
                     font-size: 14px;
+                    border-bottom: 2px solid #ddd;
                 }}
                 td {{
                     padding: 8px;
                     border-bottom: 1px solid #ddd;
                     font-size: 14px;
-                }}
-                tr:nth-child(even) {{
-                    background: #f8f9fa;
                 }}
                 .totali {{
                     margin-top: 20px;
@@ -123,8 +125,16 @@ class PDFLayout:
                             <div class="info-value">{denominazione_cedente}</div>
                         </div>
                         <div class="info-group">
+                            <div class="info-label">Identificativo fiscale ai fini IVA:</div>
+                            <div class="info-value">{id_fiscale_iva_cedente}</div>
+                        </div>
+                        <div class="info-group">
                             <div class="info-label">Partita IVA:</div>
                             <div class="info-value">{partita_iva_cedente}</div>
+                        </div>
+                        <div class="info-group">
+                            <div class="info-label">Regime Fiscale:</div>
+                            <div class="info-value">{regime_fiscale_cedente}</div>
                         </div>
                         <div class="info-group">
                             <div class="info-label">Indirizzo:</div>
@@ -144,6 +154,18 @@ class PDFLayout:
                         <div class="info-group">
                             <div class="info-label">Partita IVA:</div>
                             <div class="info-value">{partita_iva_committente}</div>
+                        </div>
+                        <div class="info-group">
+                            <div class="info-label">Codice Fiscale:</div>
+                            <div class="info-value">{codice_fiscale_committente}</div>
+                        </div>
+                        <div class="info-group">
+                            <div class="info-label">PEC:</div>
+                            <div class="info-value">{pec_committente}</div>
+                        </div>
+                        <div class="info-group">
+                            <div class="info-label">Codice Destinatario:</div>
+                            <div class="info-value">{codice_destinatario_committente}</div>
                         </div>
                         <div class="info-group">
                             <div class="info-label">Indirizzo:</div>
@@ -175,20 +197,70 @@ class PDFLayout:
 
                 <div class="section">
                     <h2>RIEPILOGO IVA E TOTALI</h2>
+                    <table class="riepilogo-table">
+                        <thead>
+                            <tr>
+                                <th>IVA %</th>
+                                <th>Imponibile</th>
+                                <th>Imposta</th>
+                                <th>Esigibilità IVA</th>
+                                <th>Riferimenti Normativi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {riepilogo_iva}
+                        </tbody>
+                    </table>
+                    
                     <div class="totali">
                         <div class="totali-row">
-                            <div class="totali-label">Imponibile:</div>
+                            <div class="totali-label">Totale Imponibile:</div>
                             <div class="totali-value">€ {imponibile:.2f}</div>
                         </div>
                         <div class="totali-row">
-                            <div class="totali-label">IVA:</div>
+                            <div class="totali-label">Totale Imposta:</div>
                             <div class="totali-value">€ {imposta:.2f}</div>
                         </div>
                         <div class="totali-row">
+                            <div class="totali-label">Spese Accessorie:</div>
+                            <div class="totali-value">€ {spese_accessorie:.2f}</div>
+                        </div>
+                        <div class="totali-row">
+                            <div class="totali-label">Arrotondamento:</div>
+                            <div class="totali-value">€ {arrotondamento:.2f}</div>
+                        </div>
+                        <div class="totali-row totale-documento">
                             <div class="totali-label">Totale Documento:</div>
                             <div class="totali-value">€ {totale:.2f}</div>
                         </div>
                     </div>
+                </div>
+
+                <div class="section">
+                    <h2>MODALITÀ DI PAGAMENTO</h2>
+                    <div class="payment-info">
+                        <div class="info-group">
+                            <div class="info-label">Modalità:</div>
+                            <div class="info-value">{modalita_pagamento}</div>
+                        </div>
+                        <div class="info-group">
+                            <div class="info-label">Termini:</div>
+                            <div class="info-value">{termini_pagamento}</div>
+                        </div>
+                        <div class="info-group">
+                            <div class="info-label">IBAN:</div>
+                            <div class="info-value">{iban_pagamento}</div>
+                        </div>
+                        <div class="info-group">
+                            <div class="info-label">Scadenza:</div>
+                            <div class="info-value">{scadenza_pagamento}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>CAUSALE</h2>
+                    <div class="info-value">{causale}</div>
                 </div>
             </div>
         </body>
@@ -208,11 +280,26 @@ class PDFLayout:
                 </tr>
             """
 
+        # Genera il riepilogo IVA
+        riepilogo_iva = ""
+        for aliquota in invoice_data['totals']['riepilogo_aliquote']:
+            riepilogo_iva += f"""
+                <tr>
+                    <td>{aliquota['aliquota']}%</td>
+                    <td>€ {aliquota['imponibile']:.2f}</td>
+                    <td>€ {aliquota['imposta']:.2f}</td>
+                    <td>{aliquota['esigibilita']}</td>
+                    <td>{aliquota['riferimenti']}</td>
+                </tr>
+            """
+
         return self.html_template.format(
             numero=invoice_data['header']['numero'],
             data=invoice_data['header']['data'],
             tipo_documento=invoice_data['header']['tipo_documento'],
             denominazione_cedente=invoice_data['supplier']['denominazione'],
+            id_fiscale_iva_cedente=invoice_data['supplier']['id_fiscale_iva'],
+            regime_fiscale_cedente=invoice_data['supplier']['regime_fiscale'],
             partita_iva_cedente=invoice_data['supplier']['partita_iva'],
             indirizzo_cedente=invoice_data['supplier']['indirizzo'],
             cap_cedente=invoice_data['supplier']['cap'],
@@ -224,8 +311,19 @@ class PDFLayout:
             cap_committente=invoice_data['customer']['cap'],
             citta_committente=invoice_data['customer']['citta'],
             provincia_committente=invoice_data['customer']['provincia'],
+            codice_fiscale_committente=invoice_data['customer']['codice_fiscale'],
+            pec_committente=invoice_data['customer']['pec'],
+            codice_destinatario_committente=invoice_data['customer']['codice_destinatario'],
+            causale=invoice_data['customer']['causale'],
             dati_beni_servizi=dati_beni_servizi,
             imponibile=invoice_data['totals']['imponibile'],
             imposta=invoice_data['totals']['imposta'],
-            totale=invoice_data['totals']['imponibile'] + invoice_data['totals']['imposta']
+            totale=invoice_data['totals']['imponibile'] + invoice_data['totals']['imposta'],
+            modalita_pagamento=invoice_data['payment']['modalita'],
+            termini_pagamento=invoice_data['payment']['termini'],
+            iban_pagamento=invoice_data['payment']['iban'],
+            scadenza_pagamento=invoice_data['payment']['scadenza'],
+            riepilogo_iva=riepilogo_iva,
+            spese_accessorie=invoice_data['totals']['spese_accessorie'],
+            arrotondamento=invoice_data['totals']['arrotondamento']
         ) 
