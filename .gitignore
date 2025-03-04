@@ -15,7 +15,6 @@ build/
 *.spec
 
 # PyInstaller cache
-*.spec
 
 #Python specific folders
 __pycache__/

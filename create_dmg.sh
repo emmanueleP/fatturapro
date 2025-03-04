@@ -1,7 +1,13 @@
 #!/bin/bash
 
+# Pulisci le cartelle di build e dist
+rm -rf build/ dist/
+
 # Rimuovi DMG esistenti
 rm -f "FatturaPro.dmg"
+
+# Esegui il build
+python3 -m PyInstaller build.spec
 
 # Crea il DMG
 create-dmg \
