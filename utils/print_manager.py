@@ -186,7 +186,19 @@ class PrintManager:
         import subprocess
         import shutil
         
-        # Prima prova a trovare wkhtmltopdf nel PATH del sistema
+        # Se l'app è in bundle, prova prima nella directory bin del bundle
+        if getattr(sys, 'frozen', False):
+            bundle_dir = sys._MEIPASS
+            bundle_path = os.path.join(bundle_dir, 'bin', 'wkhtmltopdf')
+            if os.path.exists(bundle_path) and os.access(bundle_path, os.X_OK):
+                return bundle_path
+        
+        # Prova nella directory bin locale (sviluppo)
+        local_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'bin', 'wkhtmltopdf')
+        if os.path.exists(local_path) and os.access(local_path, os.X_OK):
+            return local_path
+        
+        # Se non è nel bundle, prova a trovare wkhtmltopdf nel PATH del sistema
         wkhtmltopdf_path = shutil.which('wkhtmltopdf')
         if wkhtmltopdf_path:
             return wkhtmltopdf_path
@@ -202,19 +214,7 @@ class PrintManager:
             if os.path.exists(path) and os.access(path, os.X_OK):
                 return path
         
-        # Se l'app è in bundle, prova nella directory bin
-        if getattr(sys, 'frozen', False):
-            bundle_dir = sys._MEIPASS
-            bundle_path = os.path.join(bundle_dir, 'bin', 'wkhtmltopdf')
-            if os.path.exists(bundle_path) and os.access(bundle_path, os.X_OK):
-                return bundle_path
-        
-        # Prova nella directory bin locale (sviluppo)
-        local_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'bin', 'wkhtmltopdf')
-        if os.path.exists(local_path) and os.access(local_path, os.X_OK):
-            return local_path
-        
-        return None 
+        return None
 
     def _open_pdf(self, pdf_path):
         """Apre il PDF con l'applicazione di default"""
