@@ -34,6 +34,12 @@ class PDFLayout:
                     font-size: 14px;
                     margin-top: 5px;
                 }}
+                .header .version {{
+                    color: #999;
+                    font-size: 12px;
+                    margin-top: 5px;
+                    font-style: italic;
+                }}
                 .section {{
                     margin: 15px 0;
                     padding: 15px;
@@ -63,6 +69,11 @@ class PDFLayout:
                 .info-value {{
                     margin-top: 2px;
                     font-size: 14px;
+                }}
+                .info-code {{
+                    color: #007bff;
+                    font-weight: bold;
+                    font-size: 12px;
                 }}
                 .payment-info {{
                     display: grid;
@@ -105,6 +116,18 @@ class PDFLayout:
                     min-width: 100px;
                     text-align: right;
                 }}
+                .totale-documento {{
+                    font-size: 16px;
+                    font-weight: bold;
+                    color: #007bff;
+                    border-top: 2px solid #007bff;
+                    padding-top: 10px;
+                    margin-top: 10px;
+                }}
+                .nazione {{
+                    color: #666;
+                    font-size: 12px;
+                }}
             </style>
         </head>
         <body>
@@ -113,7 +136,10 @@ class PDFLayout:
                     <h1>FATTURA ELETTRONICA</h1>
                     <div class="tipo-doc">
                         Numero: {numero} del {data}<br>
-                        Tipo documento: {tipo_documento}
+                        Tipo documento: {tipo_documento} - {tipo_documento_desc}
+                    </div>
+                    <div class="version">
+                        Versione specifiche tecniche: {version}
                     </div>
                 </div>
 
@@ -141,6 +167,7 @@ class PDFLayout:
                             <div class="info-value">
                                 {indirizzo_cedente}<br>
                                 {cap_cedente} {citta_cedente} ({provincia_cedente})
+                                <span class="nazione">{nazione_cedente}</span>
                             </div>
                         </div>
                     </div>
@@ -172,6 +199,7 @@ class PDFLayout:
                             <div class="info-value">
                                 {indirizzo_committente}<br>
                                 {cap_committente} {citta_committente} ({provincia_committente})
+                                <span class="nazione">{nazione_committente}</span>
                             </div>
                         </div>
                     </div>
@@ -183,7 +211,9 @@ class PDFLayout:
                         <thead>
                             <tr>
                                 <th>Descrizione</th>
+                                <th>Codice Articolo</th>
                                 <th>Quantità</th>
+                                <th>Unità di Misura</th>
                                 <th>Prezzo Unitario</th>
                                 <th>Importo</th>
                                 <th>IVA %</th>
@@ -241,11 +271,17 @@ class PDFLayout:
                     <div class="payment-info">
                         <div class="info-group">
                             <div class="info-label">Modalità:</div>
-                            <div class="info-value">{modalita_pagamento}</div>
+                            <div class="info-value">
+                                <span class="info-code">{modalita_pagamento}</span><br>
+                                {modalita_pagamento_desc}
+                            </div>
                         </div>
                         <div class="info-group">
                             <div class="info-label">Termini:</div>
-                            <div class="info-value">{termini_pagamento}</div>
+                            <div class="info-value">
+                                <span class="info-code">{termini_pagamento}</span><br>
+                                {termini_pagamento_desc}
+                            </div>
                         </div>
                         <div class="info-group">
                             <div class="info-label">IBAN:</div>
@@ -268,62 +304,104 @@ class PDFLayout:
         """
 
     def generate_invoice_html(self, invoice_data):
+        # Estrae i dati dalla struttura della fattura
+        header = invoice_data.get('header', {})
+        supplier = invoice_data.get('supplier', {})
+        customer = invoice_data.get('customer', {})
+        items = invoice_data.get('items', [])
+        totals = invoice_data.get('totals', {})
+        payment = invoice_data.get('payment', {})
+        version = invoice_data.get('version', 'N/D')
+        
+        # Genera le righe della tabella beni/servizi
         dati_beni_servizi = ""
-        for item in invoice_data['items']:
+        for item in items:
             dati_beni_servizi += f"""
                 <tr>
-                    <td>{item['descrizione']}</td>
-                    <td>{item['quantita']}</td>
-                    <td>€ {item['prezzo_unitario']:.2f}</td>
-                    <td>€ {item['importo']:.2f}</td>
-                    <td>{item['aliquota_iva']}%</td>
+                    <td>{item.get('descrizione', 'N/D')}</td>
+                    <td>{item.get('codice_articolo', 'N/D')}</td>
+                    <td>{item.get('quantita', 0):.2f}</td>
+                    <td>{item.get('unita_misura', 'N/D')}</td>
+                    <td>€ {item.get('prezzo_unitario', 0):.2f}</td>
+                    <td>€ {item.get('importo', 0):.2f}</td>
+                    <td>{item.get('aliquota_iva', 0):.0f}%</td>
                 </tr>
             """
-
+        
         # Genera il riepilogo IVA
         riepilogo_iva = ""
-        for aliquota in invoice_data['totals']['riepilogo_aliquote']:
+        for riepilogo in totals.get('riepilogo_aliquote', []):
             riepilogo_iva += f"""
                 <tr>
-                    <td>{aliquota['aliquota']}%</td>
-                    <td>€ {aliquota['imponibile']:.2f}</td>
-                    <td>€ {aliquota['imposta']:.2f}</td>
-                    <td>{aliquota['esigibilita']}</td>
-                    <td>{aliquota['riferimenti']}</td>
+                    <td>{riepilogo.get('aliquota', 0):.0f}%</td>
+                    <td>€ {riepilogo.get('imponibile', 0):.2f}</td>
+                    <td>€ {riepilogo.get('imposta', 0):.2f}</td>
+                    <td>{riepilogo.get('esigibilita', 'N/D')}</td>
+                    <td>{riepilogo.get('riferimenti', 'N/D')}</td>
                 </tr>
             """
-
-        return self.html_template.format(
-            numero=invoice_data['header']['numero'],
-            data=invoice_data['header']['data'],
-            tipo_documento=invoice_data['header']['tipo_documento'],
-            denominazione_cedente=invoice_data['supplier']['denominazione'],
-            id_fiscale_iva_cedente=invoice_data['supplier']['id_fiscale_iva'],
-            regime_fiscale_cedente=invoice_data['supplier']['regime_fiscale'],
-            partita_iva_cedente=invoice_data['supplier']['partita_iva'],
-            indirizzo_cedente=invoice_data['supplier']['indirizzo'],
-            cap_cedente=invoice_data['supplier']['cap'],
-            citta_cedente=invoice_data['supplier']['citta'],
-            provincia_cedente=invoice_data['supplier']['provincia'],
-            denominazione_committente=invoice_data['customer']['denominazione'],
-            partita_iva_committente=invoice_data['customer']['partita_iva'],
-            indirizzo_committente=invoice_data['customer']['indirizzo'],
-            cap_committente=invoice_data['customer']['cap'],
-            citta_committente=invoice_data['customer']['citta'],
-            provincia_committente=invoice_data['customer']['provincia'],
-            codice_fiscale_committente=invoice_data['customer']['codice_fiscale'],
-            pec_committente=invoice_data['customer']['pec'],
-            codice_destinatario_committente=invoice_data['customer']['codice_destinatario'],
-            causale=invoice_data['customer']['causale'],
+        
+        # Calcola il totale
+        totale = (totals.get('imponibile', 0) + 
+                 totals.get('imposta', 0) + 
+                 totals.get('spese_accessorie', 0) + 
+                 totals.get('arrotondamento', 0))
+        
+        # Sostituisce i valori nel template
+        html_content = self.html_template.format(
+            # Header
+            numero=header.get('numero', 'N/D'),
+            data=header.get('data', 'N/D'),
+            tipo_documento=header.get('tipo_documento', 'N/D'),
+            tipo_documento_desc=header.get('tipo_documento_desc', 'N/D'),
+            version=version,
+            
+            # Cedente/Prestatore
+            denominazione_cedente=supplier.get('denominazione', 'N/D'),
+            id_fiscale_iva_cedente=supplier.get('id_fiscale_iva', 'N/D'),
+            partita_iva_cedente=supplier.get('partita_iva', 'N/D'),
+            regime_fiscale_cedente=supplier.get('regime_fiscale', 'N/D'),
+            indirizzo_cedente=supplier.get('indirizzo', 'N/D'),
+            cap_cedente=supplier.get('cap', 'N/D'),
+            citta_cedente=supplier.get('citta', 'N/D'),
+            provincia_cedente=supplier.get('provincia', 'N/D'),
+            nazione_cedente=supplier.get('nazione', 'IT'),
+            
+            # Cessionario/Committente
+            denominazione_committente=customer.get('denominazione', 'N/D'),
+            partita_iva_committente=customer.get('partita_iva', 'N/D'),
+            codice_fiscale_committente=customer.get('codice_fiscale', 'N/D'),
+            pec_committente=customer.get('pec', 'N/D'),
+            codice_destinatario_committente=customer.get('codice_destinatario', 'N/D'),
+            indirizzo_committente=customer.get('indirizzo', 'N/D'),
+            cap_committente=customer.get('cap', 'N/D'),
+            citta_committente=customer.get('citta', 'N/D'),
+            provincia_committente=customer.get('provincia', 'N/D'),
+            nazione_committente=customer.get('nazione', 'IT'),
+            
+            # Dati beni/servizi
             dati_beni_servizi=dati_beni_servizi,
-            imponibile=invoice_data['totals']['imponibile'],
-            imposta=invoice_data['totals']['imposta'],
-            totale=invoice_data['totals']['imponibile'] + invoice_data['totals']['imposta'],
-            modalita_pagamento=invoice_data['payment']['modalita'],
-            termini_pagamento=invoice_data['payment']['termini'],
-            iban_pagamento=invoice_data['payment']['iban'],
-            scadenza_pagamento=invoice_data['payment']['scadenza'],
+            
+            # Riepilogo IVA
             riepilogo_iva=riepilogo_iva,
-            spese_accessorie=invoice_data['totals']['spese_accessorie'],
-            arrotondamento=invoice_data['totals']['arrotondamento']
-        ) 
+            
+            # Totali
+            imponibile=totals.get('imponibile', 0),
+            imposta=totals.get('imposta', 0),
+            spese_accessorie=totals.get('spese_accessorie', 0),
+            arrotondamento=totals.get('arrotondamento', 0),
+            totale=totale,
+            
+            # Pagamento
+            modalita_pagamento=payment.get('modalita', 'N/D'),
+            modalita_pagamento_desc=payment.get('modalita_desc', 'N/D'),
+            termini_pagamento=payment.get('termini', 'N/D'),
+            termini_pagamento_desc=payment.get('termini_desc', 'N/D'),
+            iban_pagamento=payment.get('iban', 'N/D'),
+            scadenza_pagamento=payment.get('scadenza', 'N/D'),
+            
+            # Causale
+            causale=customer.get('causale', 'N/D')
+        )
+        
+        return html_content 

@@ -415,37 +415,76 @@ class MainWindow(QMainWindow):
         return html
     
     def save_as_pdf(self):
-        if not self.viewer.toPlainText():
+        """Salva la fattura corrente come PDF."""
+        if not self.current_invoice_data:
+            QMessageBox.warning(self, "Attenzione", "Nessuna fattura caricata da salvare")
             return
             
         file_name, _ = QFileDialog.getSaveFileName(
-            self,
-            "Salva come PDF",
-            "",
+            self, 
+            "Salva Fattura come PDF", 
+            "", 
             "File PDF (*.pdf)"
         )
         
         if file_name:
-            # Ottieni l'HTML dal viewer
-            html_content = self.viewer.toHtml()
-            
-            # Ottieni il percorso corretto di wkhtmltopdf
-            if getattr(sys, 'frozen', False):
-                # Se l'app è in bundle (installata)
-                bundle_dir = sys._MEIPASS
-                wkhtmltopdf_path = os.path.join(bundle_dir, 'bin', 'wkhtmltopdf')
-            else:
-                # Se l'app è in sviluppo
-                wkhtmltopdf_path = 'bin/wkhtmltopdf'
-            
-            # Configura pdfkit per utilizzare wkhtmltopdf
-            config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
-            
-            # Genera il PDF
             try:
+                # Genera il contenuto HTML
+                html_content = self.viewer.toHtml()
+                
+                # Trova il percorso di wkhtmltopdf
+                wkhtmltopdf_path = self._find_wkhtmltopdf()
+                
+                if not wkhtmltopdf_path:
+                    QMessageBox.critical(self, "Errore", 
+                        "wkhtmltopdf non trovato. Installalo da: https://wkhtmltopdf.org/downloads.html")
+                    return
+                
+                # Configura pdfkit per utilizzare wkhtmltopdf
+                config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+                
+                # Genera il PDF
                 pdfkit.from_string(html_content, file_name, configuration=config, options={'quiet': ''})
+                
+                QMessageBox.information(self, "Successo", f"PDF salvato come: {file_name}")
+                
             except Exception as e:
                 QMessageBox.critical(self, "Errore", f"Errore durante la creazione del PDF: {str(e)}")
+    
+    def _find_wkhtmltopdf(self):
+        """Trova il percorso dell'eseguibile wkhtmltopdf."""
+        import subprocess
+        import shutil
+        
+        # Prima prova a trovare wkhtmltopdf nel PATH del sistema
+        wkhtmltopdf_path = shutil.which('wkhtmltopdf')
+        if wkhtmltopdf_path:
+            return wkhtmltopdf_path
+        
+        # Se non è nel PATH, prova percorsi comuni su macOS
+        common_paths = [
+            '/usr/local/bin/wkhtmltopdf',
+            '/opt/homebrew/bin/wkhtmltopdf',
+            '/usr/bin/wkhtmltopdf'
+        ]
+        
+        for path in common_paths:
+            if os.path.exists(path) and os.access(path, os.X_OK):
+                return path
+        
+        # Se l'app è in bundle, prova nella directory bin
+        if getattr(sys, 'frozen', False):
+            bundle_dir = sys._MEIPASS
+            bundle_path = os.path.join(bundle_dir, 'bin', 'wkhtmltopdf')
+            if os.path.exists(bundle_path) and os.access(bundle_path, os.X_OK):
+                return bundle_path
+        
+        # Prova nella directory bin locale (sviluppo)
+        local_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'bin', 'wkhtmltopdf')
+        if os.path.exists(local_path) and os.access(local_path, os.X_OK):
+            return local_path
+        
+        return None
     
     def print_invoice(self):
         if self.current_invoice_data:  # Verifica che ci siano dati da stampare

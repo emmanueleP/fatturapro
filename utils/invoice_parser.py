@@ -3,11 +3,93 @@ from datetime import datetime
 
 class InvoiceParser:
     def __init__(self):
-        # Namespace utilizzati nelle fatture elettroniche italiane
+        # Namespace utilizzati nelle fatture elettroniche italiane secondo le specifiche dell'Agenzia delle Entrate
+        # Supporto per diverse versioni delle specifiche tecniche
         self.ns = {
             'p': 'http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2',
+            'p_v1_8': 'http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.8',
+            'p_v1_9': 'http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.9',
             'ds': 'http://www.w3.org/2000/09/xmldsig#',
             'xsi': 'http://www.w3.org/2001/XMLSchema-instance'
+        }
+        
+        # Codici tipo documento secondo le specifiche tecniche
+        self.tipi_documento = {
+            'TD01': 'Fattura',
+            'TD02': 'Acconto/Anticipo su fattura',
+            'TD03': 'Acconto/Anticipo su parcella',
+            'TD04': 'Nota di credito',
+            'TD05': 'Nota di debito',
+            'TD06': 'Parcella',
+            'TD16': 'Integrazione fattura reverse charge interno',
+            'TD17': 'Integrazione autofattura per acquisti servizi dall\'estero',
+            'TD18': 'Integrazione per acquisti di beni da soggetti non residenti',
+            'TD19': 'Integrazione/autofattura per acquisti in san marino con soggetti identificati',
+            'TD20': 'Autofattura per regolarizzazione e integrazione delle fatture (art.6 c.8 e 9-bis d.lgs.471/97 o art.46 c.5 D.L.331/93)',
+            'TD21': 'Autofattura per splafonamento',
+            'TD22': 'Estrazione beni da Deposito IVA',
+            'TD23': 'Estrazione beni da Deposito IVA con versamento dell\'IVA',
+            'TD24': 'Fattura differita di cui all\'art.21, 3° comma, lett. a)',
+            'TD25': 'Fattura differita di cui all\'art.21, 3° comma, lett. b)',
+            'TD26': 'Cessione di beni ammortizzabili e per passaggi interni (art.36 DPR 633/72)',
+            'TD27': 'Fattura per autoconsumo o per cessioni gratuite senza rivalsa',
+            'TD28': 'Acquisti di beni da soggetti non residenti con IVA assolta dal cessionario',
+            'TD29': 'Fattura per acquisti di beni da soggetti non residenti con IVA assolta dal cessionario',
+            'TD30': 'Fattura per acquisti di servizi da soggetti non residenti con IVA assolta dal cessionario',
+            'TD31': 'Fattura per acquisti di beni da soggetti non residenti con IVA assolta dal cessionario',
+            'TD32': 'Fattura per acquisti di servizi da soggetti non residenti con IVA assolta dal cessionario',
+            'TD33': 'Fattura per acquisti di beni da soggetti non residenti con IVA assolta dal cessionario',
+            'TD34': 'Fattura per acquisti di servizi da soggetti non residenti con IVA assolta dal cessionario',
+            'TD35': 'Fattura per acquisti di beni da soggetti non residenti con IVA assolta dal cessionario',
+            'TD36': 'Fattura per acquisti di servizi da soggetti non residenti con IVA assolta dal cessionario',
+            'TD37': 'Fattura per acquisti di beni da soggetti non residenti con IVA assolta dal cessionario',
+            'TD38': 'Fattura per acquisti di servizi da soggetti non residenti con IVA assolta dal cessionario',
+            'TD39': 'Fattura per acquisti di beni da soggetti non residenti con IVA assolta dal cessionario',
+            'TD40': 'Fattura per acquisti di servizi da soggetti non residenti con IVA assolta dal cessionario',
+            'TD41': 'Fattura per acquisti di beni da soggetti non residenti con IVA assolta dal cessionario',
+            'TD42': 'Fattura per acquisti di servizi da soggetti non residenti con IVA assolta dal cessionario',
+            'TD43': 'Fattura per acquisti di beni da soggetti non residenti con IVA assolta dal cessionario',
+            'TD44': 'Fattura per acquisti di servizi da soggetti non residenti con IVA assolta dal cessionario',
+            'TD45': 'Fattura per acquisti di beni da soggetti non residenti con IVA assolta dal cessionario',
+            'TD46': 'Fattura per acquisti di servizi da soggetti non residenti con IVA assolta dal cessionario',
+            'TD47': 'Fattura per acquisti di beni da soggetti non residenti con IVA assolta dal cessionario',
+            'TD48': 'Fattura per acquisti di servizi da soggetti non residenti con IVA assolta dal cessionario',
+            'TD49': 'Fattura per acquisti di beni da soggetti non residenti con IVA assolta dal cessionario',
+            'TD50': 'Fattura per acquisti di servizi da soggetti non residenti con IVA assolta dal cessionario'
+        }
+        
+        # Modalità di pagamento secondo le specifiche
+        self.modalita_pagamento = {
+            'MP01': 'Contanti',
+            'MP02': 'Assegno',
+            'MP03': 'Assegno circolare',
+            'MP04': 'Contanti presso Tesoreria',
+            'MP05': 'Bonifico',
+            'MP06': 'Vaglia cambiario',
+            'MP07': 'Bollettino bancario',
+            'MP08': 'Carta di pagamento',
+            'MP09': 'RID',
+            'MP10': 'RID utenze',
+            'MP11': 'RID veloce',
+            'MP12': 'RIBA',
+            'MP13': 'MAV',
+            'MP14': 'Quietanza erario',
+            'MP15': 'Giroconto su conti di contabilità speciale',
+            'MP16': 'Domiciliazione bancaria',
+            'MP17': 'Domiciliazione postale',
+            'MP18': 'Bollettino di c/c postale',
+            'MP19': 'SEPA Direct Debit',
+            'MP20': 'SEPA Direct Debit CORE',
+            'MP21': 'SEPA Direct Debit B2B',
+            'MP22': 'Trattenuta su somme già riscosse',
+            'MP23': 'PagoPA'
+        }
+        
+        # Condizioni di pagamento
+        self.condizioni_pagamento = {
+            'TP01': 'Pagamento a rate',
+            'TP02': 'Pagamento completo',
+            'TP03': 'Anticipo'
         }
     
     def parse_invoice(self, xml_content):
@@ -16,11 +98,8 @@ class InvoiceParser:
             
         root = ET.fromstring(xml_content)
         
-        # Determina il namespace effettivo dal file
-        for key, value in root.attrib.items():
-            if value == self.ns['p']:
-                self.ns['p'] = root.tag.split('}')[0].strip('{')
-                break
+        # Determina il namespace effettivo dal file e la versione delle specifiche
+        self._detect_namespace_and_version(root)
         
         # Estrae i dati principali della fattura
         header = self._parse_header(root)
@@ -36,8 +115,32 @@ class InvoiceParser:
             'customer': customer,
             'items': items,
             'totals': totals,
-            'payment': payment
+            'payment': payment,
+            'version': self.detected_version
         }
+    
+    def _detect_namespace_and_version(self, root):
+        """Rileva il namespace e la versione delle specifiche utilizzate"""
+        # Cerca il namespace nel tag root
+        root_tag = root.tag
+        if '}' in root_tag:
+            detected_ns = root_tag.split('}')[0].strip('{')
+            
+            # Determina la versione basandosi sul namespace
+            if 'v1.9' in detected_ns:
+                self.detected_version = '1.9'
+                self.ns['p'] = detected_ns
+            elif 'v1.8' in detected_ns:
+                self.detected_version = '1.8'
+                self.ns['p'] = detected_ns
+            elif 'v1.2' in detected_ns:
+                self.detected_version = '1.2'
+                self.ns['p'] = detected_ns
+            else:
+                self.detected_version = 'unknown'
+                self.ns['p'] = detected_ns
+        else:
+            self.detected_version = 'unknown'
     
     def _safe_find_text(self, element, xpath, default='N/D'):
         """Trova in sicurezza un elemento XML e restituisce il suo testo"""
@@ -69,6 +172,7 @@ class InvoiceParser:
         if header_data is None:
             return {
                 'tipo_documento': 'N/D',
+                'tipo_documento_desc': 'N/D',
                 'data': datetime.now().strftime('%d/%m/%Y'),
                 'numero': 'N/D',
                 'divisa': 'EUR'
@@ -80,8 +184,12 @@ class InvoiceParser:
         except:
             data_formatted = data_str
             
+        tipo_doc = self._safe_find_text(header_data, './/TipoDocumento')
+        tipo_doc_desc = self.tipi_documento.get(tipo_doc, 'N/D')
+            
         return {
-            'tipo_documento': self._safe_find_text(header_data, './/TipoDocumento'),
+            'tipo_documento': tipo_doc,
+            'tipo_documento_desc': tipo_doc_desc,
             'data': data_formatted,
             'numero': self._safe_find_text(header_data, './/Numero'),
             'divisa': self._safe_find_text(header_data, './/Divisa', 'EUR')
@@ -124,13 +232,19 @@ class InvoiceParser:
                 'indirizzo': 'N/D',
                 'cap': 'N/D',
                 'citta': 'N/D',
-                'provincia': 'N/D'
+                'provincia': 'N/D',
+                'nazione': 'IT'
             }
         
+        # Gestione denominazione o nome+cognome
+        denominazione = self._safe_find_text(supplier_data, './/Denominazione')
+        if not denominazione or denominazione == 'N/D':
+            nome = self._safe_find_text(supplier_data, './/Nome', '')
+            cognome = self._safe_find_text(supplier_data, './/Cognome', '')
+            denominazione = f"{nome} {cognome}".strip() if nome or cognome else 'N/D'
+        
         return {
-            'denominazione': self._safe_find_text(supplier_data, './/Denominazione') or 
-                           self._safe_find_text(supplier_data, './/Nome') + ' ' + 
-                           self._safe_find_text(supplier_data, './/Cognome'),
+            'denominazione': denominazione,
             'partita_iva': self._safe_find_text(supplier_data, './/IdCodice'),
             'id_fiscale_iva': self._safe_find_text(supplier_data, './/IdFiscaleIVA/IdPaese', '') + 
                              self._safe_find_text(supplier_data, './/IdFiscaleIVA/IdCodice', ''),
@@ -138,7 +252,8 @@ class InvoiceParser:
             'indirizzo': self._safe_find_text(address_data, './/Indirizzo'),
             'cap': self._safe_find_text(address_data, './/CAP'),
             'citta': self._safe_find_text(address_data, './/Comune'),
-            'provincia': self._safe_find_text(address_data, './/Provincia')
+            'provincia': self._safe_find_text(address_data, './/Provincia'),
+            'nazione': self._safe_find_text(address_data, './/Nazione', 'IT')
         }
     
     def _parse_customer(self, root):
@@ -208,13 +323,19 @@ class InvoiceParser:
                 'cap': 'N/D',
                 'citta': 'N/D',
                 'provincia': 'N/D',
+                'nazione': 'IT',
                 'causale': 'N/D'
             }
         
+        # Gestione denominazione o nome+cognome
+        denominazione = self._safe_find_text(customer_data, './/Denominazione')
+        if not denominazione or denominazione == 'N/D':
+            nome = self._safe_find_text(customer_data, './/Nome', '')
+            cognome = self._safe_find_text(customer_data, './/Cognome', '')
+            denominazione = f"{nome} {cognome}".strip() if nome or cognome else 'N/D'
+        
         return {
-            'denominazione': self._safe_find_text(customer_data, './/Denominazione') or 
-                           self._safe_find_text(customer_data, './/Nome') + ' ' + 
-                           self._safe_find_text(customer_data, './/Cognome'),
+            'denominazione': denominazione,
             'partita_iva': self._safe_find_text(customer_data, './/IdCodice'),
             'codice_fiscale': self._safe_find_text(customer_data, './/CodiceFiscale'),
             'pec': self._safe_find_text(pec_data, './/PECDestinatario') if pec_data is not None else 'N/D',
@@ -223,6 +344,7 @@ class InvoiceParser:
             'cap': self._safe_find_text(address_data, './/CAP'),
             'citta': self._safe_find_text(address_data, './/Comune'),
             'provincia': self._safe_find_text(address_data, './/Provincia'),
+            'nazione': self._safe_find_text(address_data, './/Nazione', 'IT'),
             'causale': causale.text if causale is not None else 'N/D'
         }
     
@@ -238,12 +360,35 @@ class InvoiceParser:
         
         for path in items_paths:
             for line in root.findall(path, self.ns):
+                # Gestione sicura dei valori numerici
+                try:
+                    quantita = float(self._safe_find_text(line, './/Quantita', '1'))
+                except:
+                    quantita = 1.0
+                    
+                try:
+                    prezzo_unitario = float(self._safe_find_text(line, './/PrezzoUnitario', '0'))
+                except:
+                    prezzo_unitario = 0.0
+                    
+                try:
+                    importo = float(self._safe_find_text(line, './/PrezzoTotale', '0'))
+                except:
+                    importo = 0.0
+                    
+                try:
+                    aliquota_iva = float(self._safe_find_text(line, './/AliquotaIVA', '0'))
+                except:
+                    aliquota_iva = 0.0
+                
                 items.append({
                     'descrizione': self._safe_find_text(line, './/Descrizione'),
-                    'quantita': float(self._safe_find_text(line, './/Quantita', '1')),
-                    'prezzo_unitario': float(self._safe_find_text(line, './/PrezzoUnitario', '0')),
-                    'importo': float(self._safe_find_text(line, './/PrezzoTotale', '0')),
-                    'aliquota_iva': float(self._safe_find_text(line, './/AliquotaIVA', '0'))
+                    'quantita': quantita,
+                    'prezzo_unitario': prezzo_unitario,
+                    'importo': importo,
+                    'aliquota_iva': aliquota_iva,
+                    'unita_misura': self._safe_find_text(line, './/UnitaMisura', 'N/D'),
+                    'codice_articolo': self._safe_find_text(line, './/CodiceArticolo', 'N/D')
                 })
             if items:  # Se abbiamo trovato degli elementi, usciamo dal ciclo
                 break
@@ -284,9 +429,21 @@ class InvoiceParser:
         riepilogo_aliquote = []
         
         for element in totals_elements:
-            imponibile = float(self._safe_find_text(element, './/ImponibileImporto', '0'))
-            imposta = float(self._safe_find_text(element, './/Imposta', '0'))
-            aliquota = float(self._safe_find_text(element, './/AliquotaIVA', '0'))
+            try:
+                imponibile = float(self._safe_find_text(element, './/ImponibileImporto', '0'))
+            except:
+                imponibile = 0.0
+                
+            try:
+                imposta = float(self._safe_find_text(element, './/Imposta', '0'))
+            except:
+                imposta = 0.0
+                
+            try:
+                aliquota = float(self._safe_find_text(element, './/AliquotaIVA', '0'))
+            except:
+                aliquota = 0.0
+                
             esigibilita = self._safe_find_text(element, './/EsigibilitaIVA', 'N/D')
             riferimenti = self._safe_find_text(element, './/RiferimentoNormativo', 'N/D')
             
@@ -311,7 +468,10 @@ class InvoiceParser:
         for path in spese_paths:
             spese = root.find(path, self.ns)
             if spese is not None:
-                spese_accessorie = float(spese.text)
+                try:
+                    spese_accessorie = float(spese.text)
+                except:
+                    spese_accessorie = 0.0
                 break
         
         arr_paths = [
@@ -322,7 +482,10 @@ class InvoiceParser:
         for path in arr_paths:
             arr = root.find(path, self.ns)
             if arr is not None:
-                arrotondamento = float(arr.text)
+                try:
+                    arrotondamento = float(arr.text)
+                except:
+                    arrotondamento = 0.0
                 break
         
         return {
@@ -351,7 +514,9 @@ class InvoiceParser:
         if payment_data is None:
             return {
                 'modalita': 'N/D',
+                'modalita_desc': 'N/D',
                 'termini': 'N/D',
+                'termini_desc': 'N/D',
                 'iban': 'N/D',
                 'scadenza': 'N/D'
             }
@@ -364,9 +529,17 @@ class InvoiceParser:
             except:
                 pass
         
+        modalita = self._safe_find_text(payment_data, './/ModalitaPagamento')
+        modalita_desc = self.modalita_pagamento.get(modalita, 'N/D')
+        
+        termini = self._safe_find_text(payment_data, './/CondizioniPagamento')
+        termini_desc = self.condizioni_pagamento.get(termini, 'N/D')
+        
         return {
-            'modalita': self._safe_find_text(payment_data, './/ModalitaPagamento'),
-            'termini': self._safe_find_text(payment_data, './/CondizioniPagamento'),
+            'modalita': modalita,
+            'modalita_desc': modalita_desc,
+            'termini': termini,
+            'termini_desc': termini_desc,
             'iban': self._safe_find_text(payment_data, './/IBAN'),
             'scadenza': scadenza or 'N/D'
         } 
