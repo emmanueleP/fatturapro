@@ -52,7 +52,7 @@ FatturaPro è conforme alle specifiche tecniche dell'Agenzia delle Entrate per l
 - **Versione 1.8**: Utilizzabile dal 1° febbraio 2024
 - **Versione 1.9**: Utilizzabile dal 1° aprile 2025
 
-Per maggiori dettagli, consulta [SPECIFICHE_AGENZIA_ENTRATE.md](SPECIFICHE_AGENZIA_ENTRATE.md).
+Per maggiori dettagli, consulta [fatture_ade_specifiche.md](fatture_ade_specifiche.md).
 
 ## Licenza
 Questo software è rilasciato sotto licenza GPL v3.0

@@ -7,7 +7,7 @@ rm -rf build/ dist/
 rm -f "FatturaPro.dmg"
 
 # Esegui il build
-python3 -m PyInstaller build.spec
+python3 -m PyInstaller build.specgit 
 
 # Crea il DMG con coordinate più sicure
 create-dmg \

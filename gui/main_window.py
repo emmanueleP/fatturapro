@@ -17,15 +17,15 @@ import os
 import sys
 import tempfile
 from utils.print_manager import PrintManager
-from utils.menu_manager import MenuManager  # Importa il MenuManager
-from gui.manual_dialog import ManualDialog  # Importa il ManualDialog
+from utils.menu_manager import MenuManager  
+from gui.manual_dialog import ManualDialog  
 
 class MainWindow(QMainWindow):
     def __init__(self, theme_manager):
         super().__init__()
         self.theme_manager = theme_manager
         self.print_manager = PrintManager(self)  # Crea il PrintManager
-        self.current_invoice_data = None  # Aggiungi questa riga
+        self.current_invoice_data = None  
         
         # Inizializza le impostazioni
         self.settings = QSettings('Emmanuele', 'Fatture')
@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
         
     def setup_ui(self):
         self.setWindowTitle("FatturaPro - Visualizzatore Fatture Elettroniche")
-        self.setMinimumSize(800, 600)
+        self.setMinimumSize(900, 700)
         
         # Widget centrale
         central_widget = QWidget()

@@ -11,7 +11,6 @@ class ManualDialog(QDialog):
         layout = QVBoxLayout(self)
 
         manual_text = """
-        Benvenuto in FatturaPro!
 
         Questa applicazione ti permette di visualizzare, convertire in PDF e stampare fatture elettroniche in formato XML e P7M.
 
@@ -27,7 +26,6 @@ class ManualDialog(QDialog):
         3. Usa "Salva PDF" per esportare la fattura in formato PDF.
         4. Clicca su "Stampa" per stampare la fattura.
 
-        Se hai bisogno di ulteriore assistenza, consulta il manuale o contatta il supporto.
         """
 
         label = QLabel(manual_text)

@@ -25,36 +25,6 @@ class PrintManager:
                 QMessageBox.critical(self.parent, "Errore", "Impossibile creare il PDF per la stampa")
                 return
 
-            # Verifica se ci sono stampanti disponibili
-            available_printers = self._get_available_printers()
-            
-            if not available_printers:
-                # Se non ci sono stampanti, salva il PDF e chiedi all'utente cosa fare
-                desktop_path = os.path.expanduser("~/Desktop")
-                saved_path = os.path.join(desktop_path, "fattura_stampa.pdf")
-                import shutil
-                shutil.copy2(pdf_path, saved_path)
-                
-                from PyQt6.QtWidgets import QMessageBox, QPushButton
-                msg_box = QMessageBox(self.parent)
-                msg_box.setWindowTitle("Nessuna Stampante Configurata")
-                msg_box.setText("Non ci sono stampanti configurate nel sistema.")
-                msg_box.setInformativeText(f"Il PDF è stato salvato su Desktop come 'fattura_stampa.pdf'")
-                
-                # Aggiungi pulsanti personalizzati
-                open_button = QPushButton("Apri PDF")
-                ok_button = QPushButton("OK")
-                msg_box.addButton(open_button, QMessageBox.ButtonRole.ActionRole)
-                msg_box.addButton(ok_button, QMessageBox.ButtonRole.AcceptRole)
-                
-                msg_box.exec()
-                
-                if msg_box.clickedButton() == open_button:
-                    # Apri il PDF con l'applicazione di default
-                    self._open_pdf(saved_path)
-                
-                return
-
             # Configura la stampante
             printer = QPrinter()
             printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
@@ -62,9 +32,13 @@ class PrintManager:
             # Mostra il dialogo di stampa
             dialog = QPrintDialog(printer, self.parent)
             if dialog.exec() == QPrintDialog.DialogCode.Accepted:
-                # Stampa il PDF usando un comando di sistema
-                self.print_pdf_file(pdf_path, printer)
-                QMessageBox.information(self.parent, "Successo", "Stampa avviata con successo")
+                # Prova a stampare il PDF
+                try:
+                    self.print_pdf_file(pdf_path, printer)
+                    QMessageBox.information(self.parent, "Successo", "Stampa avviata con successo")
+                except Exception as print_error:
+                    # Se la stampa fallisce, salva il PDF e informa l'utente
+                    self._handle_print_failure(pdf_path, str(print_error))
 
         except Exception as e:
             QMessageBox.critical(self.parent, "Errore", f"Errore durante la stampa: {str(e)}")
@@ -129,57 +103,34 @@ class PrintManager:
                 
                 if printer_name and printer_name != "Default":
                     # Usa la stampante specifica selezionata
-                    os.system(f'lpr -P "{printer_name}" "{pdf_path}"')
+                    result = os.system(f'lpr -P "{printer_name}" "{pdf_path}"')
                 else:
-                    # Prova a trovare una stampante disponibile
-                    available_printers = self._get_available_printers()
-                    if available_printers:
-                        # Usa la prima stampante disponibile
-                        first_printer = available_printers[0]
-                        os.system(f'lpr -P "{first_printer}" "{pdf_path}"')
-                    else:
-                        # Se non ci sono stampanti, salva il PDF e informa l'utente
-                        desktop_path = os.path.expanduser("~/Desktop")
-                        saved_path = os.path.join(desktop_path, "fattura_stampa.pdf")
-                        import shutil
-                        shutil.copy2(pdf_path, saved_path)
-                        raise Exception(f"Nessuna stampante configurata. Il PDF è stato salvato su Desktop come 'fattura_stampa.pdf'")
+                    # Usa la stampante di default
+                    result = os.system(f'lpr "{pdf_path}"')
+                
+                # Controlla se il comando è fallito
+                if result != 0:
+                    raise Exception("Comando lpr fallito")
                     
             elif sys.platform == 'win32':  # Windows
                 # Su Windows, usa il comando print
-                os.system(f'print "{pdf_path}"')
+                result = os.system(f'print "{pdf_path}"')
+                if result != 0:
+                    raise Exception("Comando print fallito")
                 
             else:  # Linux
                 # Su Linux, usa lpr
                 printer_name = printer.printerName()
                 if printer_name:
-                    os.system(f'lpr -P "{printer_name}" "{pdf_path}"')
+                    result = os.system(f'lpr -P "{printer_name}" "{pdf_path}"')
                 else:
-                    os.system(f'lpr "{pdf_path}"')
+                    result = os.system(f'lpr "{pdf_path}"')
+                
+                if result != 0:
+                    raise Exception("Comando lpr fallito")
                     
         except Exception as e:
             raise Exception(f"Errore durante l'invio alla stampante: {str(e)}")
-
-    def _get_available_printers(self):
-        """Ottiene la lista delle stampanti disponibili su macOS"""
-        try:
-            import subprocess
-            # Usa lpstat per ottenere le stampanti disponibili
-            result = subprocess.run(['lpstat', '-p'], capture_output=True, text=True)
-            if result.returncode == 0:
-                printers = []
-                for line in result.stdout.split('\n'):
-                    if line.startswith('printer'):
-                        # Estrai il nome della stampante dalla riga "printer NOME is ..."
-                        parts = line.split()
-                        if len(parts) >= 2:
-                            printer_name = parts[1]
-                            printers.append(printer_name)
-                return printers
-            else:
-                return []
-        except:
-            return []
 
     def _find_wkhtmltopdf(self):
         """Trova il percorso dell'eseguibile wkhtmltopdf."""
@@ -227,3 +178,34 @@ class PrintManager:
                 os.system(f'xdg-open "{pdf_path}"')
         except Exception as e:
             QMessageBox.warning(self.parent, "Attenzione", f"Impossibile aprire il PDF: {str(e)}") 
+
+    def _handle_print_failure(self, pdf_path, error_message):
+        """Gestisce il fallimento della stampa salvando il PDF"""
+        try:
+            # Salva il PDF sul Desktop
+            desktop_path = os.path.expanduser("~/Desktop")
+            saved_path = os.path.join(desktop_path, "fattura_stampa.pdf")
+            import shutil
+            shutil.copy2(pdf_path, saved_path)
+            
+            # Mostra dialog con opzioni
+            from PyQt6.QtWidgets import QMessageBox, QPushButton
+            msg_box = QMessageBox(self.parent)
+            msg_box.setWindowTitle("Errore di Stampa")
+            msg_box.setText("Impossibile inviare il documento alla stampante.")
+            msg_box.setInformativeText(f"Errore: {error_message}\n\nIl PDF è stato salvato su Desktop come 'fattura_stampa.pdf'")
+            
+            # Aggiungi pulsanti personalizzati
+            open_button = QPushButton("Apri PDF")
+            ok_button = QPushButton("OK")
+            msg_box.addButton(open_button, QMessageBox.ButtonRole.ActionRole)
+            msg_box.addButton(ok_button, QMessageBox.ButtonRole.AcceptRole)
+            
+            msg_box.exec()
+            
+            if msg_box.clickedButton() == open_button:
+                # Apri il PDF con l'applicazione di default
+                self._open_pdf(saved_path)
+                
+        except Exception as e:
+            QMessageBox.critical(self.parent, "Errore", f"Errore durante il salvataggio del PDF: {str(e)}") 

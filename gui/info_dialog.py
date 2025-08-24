@@ -10,7 +10,7 @@ class InfoDialog(QDialog):
         
     def setup_ui(self):
         self.setWindowTitle("Informazioni")
-        self.setMinimumSize(600, 450) 
+        self.setMinimumSize(800, 600) 
         
         # Layout principale
         layout = QVBoxLayout(self)
@@ -74,7 +74,7 @@ class InfoDialog(QDialog):
         
         <h3>Requisiti:</h3>
         <ul>
-        Richiede macOS 13 o superiore con Apple Silicon.
+        Richiede macOS con processore M1 o superiore.
         </ul>
         
         <h3>Repository GitHub:</h3>
