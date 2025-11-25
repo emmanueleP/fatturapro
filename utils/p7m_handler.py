@@ -6,7 +6,10 @@ import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
-from typing import List, Optional
+from io import BytesIO
+from pathlib import Path
+from typing import List, Optional, Tuple
+from zipfile import BadZipFile, ZipFile
 
 from cryptography.hazmat.primitives.serialization import pkcs7
 
@@ -17,6 +20,7 @@ class P7MAttachment:
     formato: str
     dimensione: int
     contenuto: bytes
+    compression: Optional[str] = None
 
 
 class P7MHandler:
@@ -64,8 +68,10 @@ class P7MHandler:
 
             nome = self._find_child_text(allegati, "NomeAttachment") or "allegato.bin"
             formato = self._find_child_text(allegati, "FormatoAttachment") or "application/octet-stream"
+            algoritmo = self._find_child_text(allegati, "AlgoritmoCompressione")
             raw = self._find_child_text(allegati, "Attachment") or ""
             content_bytes = self._safe_b64decode(raw)
+            content_bytes, nome = self._process_attachment_payload(content_bytes, algoritmo, nome)
 
             attachments.append(
                 P7MAttachment(
@@ -73,6 +79,7 @@ class P7MHandler:
                     formato=formato,
                     dimensione=len(content_bytes),
                     contenuto=content_bytes,
+                    compression=algoritmo or None,
                 )
             )
 
@@ -271,6 +278,25 @@ class P7MHandler:
             return base64.b64decode(data.encode("ascii"), validate=False)
         except binascii.Error:
             return b""
+
+    def _process_attachment_payload(self, content_bytes: bytes, algoritmo: str, fallback_name: str) -> Tuple[bytes, str]:
+        if not algoritmo:
+            return content_bytes, fallback_name
+
+        algo = algoritmo.strip().upper()
+        if algo == "ZIP":
+            try:
+                with ZipFile(BytesIO(content_bytes)) as zipped:
+                    members = [name for name in zipped.namelist() if not name.endswith("/")]
+                    if not members:
+                        return content_bytes, fallback_name
+                    first_member = members[0]
+                    extracted = zipped.read(first_member)
+                    return extracted, Path(first_member).name or fallback_name
+            except (BadZipFile, KeyError):
+                return content_bytes, fallback_name
+
+        return content_bytes, fallback_name
 
     def _write_temp_file(self, data: bytes):
         fd, path = tempfile.mkstemp()
