@@ -26,6 +26,8 @@ class MainWindow(QMainWindow):
         self.theme_manager = theme_manager
         self.print_manager = PrintManager(self)  # Crea il PrintManager
         self.current_invoice_data = None  
+        self.current_attachments = []
+        self.p7m_handler = P7MHandler()
         
         # Inizializza le impostazioni
         self.settings = QSettings('Emmanuele', 'Fatture')
@@ -150,19 +152,19 @@ class MainWindow(QMainWindow):
         try:
             with open(file_path, 'rb') as file:
                 content = file.read()
+            self.current_attachments = []
             
             # Verifica se il file è un P7M
             if file_path.lower().endswith('.p7m'):
-                p7m_handler = P7MHandler()
-                # Estrai il contenuto XML e le info sul firmatario
-                xml_content = p7m_handler.extract_xml_from_p7m(content)
-                signer_info = p7m_handler.get_signer_info(content)
-                
-                # Aggiungi le informazioni sulla firma al viewer
+                xml_content, attachments = self.p7m_handler.extract_invoice_payload(content)
+                signer_info = self.p7m_handler.get_signer_info(content)
                 signature_html = self._format_signature_info(signer_info)
             else:
                 xml_content = content.decode('utf-8')
                 signature_html = ""
+                attachments = self.p7m_handler.extract_attachments_from_xml(xml_content)
+
+            self.current_attachments = attachments
             
             parser = InvoiceParser()
             self.current_invoice_data = parser.parse_invoice(xml_content)  # Salva i dati
@@ -171,9 +173,10 @@ class MainWindow(QMainWindow):
             pdf_layout = PDFLayout()
             html_content = pdf_layout.generate_invoice_html(self.current_invoice_data)
             
-            # Aggiungi le informazioni sulla firma se presenti
-            if signature_html:
-                html_content = html_content.replace('</body></html>', f'{signature_html}</body></html>')
+            attachments_html = self._format_attachments_info(attachments)
+            extra_sections = f"{signature_html}{attachments_html}"
+            if extra_sections.strip():
+                html_content = html_content.replace('</body></html>', f'{extra_sections}</body></html>')
             
             self.viewer.setHtml(html_content)
             
@@ -390,6 +393,33 @@ class MainWindow(QMainWindow):
         """
         return html
     
+    def _format_attachments_info(self, attachments):
+        if not attachments:
+            return ""
+
+        rows = ""
+        for att in attachments:
+            size_kb = att.dimensione / 1024 if att.dimensione else 0
+            rows += f"""
+                <tr>
+                    <td>{att.nome}</td>
+                    <td>{att.formato}</td>
+                    <td>{size_kb:.1f} KB</td>
+                </tr>
+            """
+
+        return f"""
+            <h3>Allegati presenti nella fattura:</h3>
+            <table>
+                <tr>
+                    <th>Nome</th>
+                    <th>Formato</th>
+                    <th>Dimensione</th>
+                </tr>
+                {rows}
+            </table>
+        """
+    
     def _format_signature_info(self, signer_info):
         html = """
             <h3>Informazioni sulla Firma Digitale:</h3>
@@ -402,7 +432,7 @@ class MainWindow(QMainWindow):
         """
         
         for signer in signer_info:
-            data_firma = signer['data_firma'].strftime('%d/%m/%Y %H:%M:%S') if signer['data_firma'] else 'N/D'
+            data_firma = signer['data_firma'] if signer['data_firma'] else 'N/D'
             html += f"""
                 <tr>
                     <td>{signer['nome']}</td>
