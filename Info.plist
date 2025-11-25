@@ -8,6 +8,7 @@
             <key>CFBundleTypeExtensions</key>
             <array>
                 <string>xml</string>
+                <string>p7m</string>
             </array>
             <key>CFBundleTypeName</key>
             <string>XML Document</string>

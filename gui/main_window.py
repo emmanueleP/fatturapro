@@ -26,6 +26,7 @@ class MainWindow(QMainWindow):
         self.theme_manager = theme_manager
         self.print_manager = PrintManager(self)  # Crea il PrintManager
         self.current_invoice_data = None  
+        self.current_file_is_p7m = False
         self.current_attachments = []
         self.p7m_handler = P7MHandler()
         
@@ -153,9 +154,10 @@ class MainWindow(QMainWindow):
             with open(file_path, 'rb') as file:
                 content = file.read()
             self.current_attachments = []
+            self.current_file_is_p7m = file_path.lower().endswith('.p7m')
             
             # Verifica se il file è un P7M
-            if file_path.lower().endswith('.p7m'):
+            if self.current_file_is_p7m:
                 xml_content, attachments = self.p7m_handler.extract_invoice_payload(content)
                 signer_info = self.p7m_handler.get_signer_info(content)
                 signature_html = self._format_signature_info(signer_info)
@@ -182,6 +184,34 @@ class MainWindow(QMainWindow):
             
         except Exception as e:
             self.viewer.setText(f"Errore nel caricamento del file: {str(e)}")
+
+    def extract_attachments(self):
+        if not self.current_attachments:
+            QMessageBox.information(
+                self,
+                "Estrai allegati",
+                "La fattura corrente non contiene allegati da estrarre."
+            )
+            return
+
+        target_dir = QFileDialog.getExistingDirectory(self, "Seleziona cartella destinazione")
+        if not target_dir:
+            return
+
+        saved_files = []
+        for idx, attachment in enumerate(self.current_attachments, start=1):
+            filename = Path(attachment.nome).name or f"allegato_{idx}"
+            if "." not in filename and attachment.formato.lower().startswith("application/pdf"):
+                filename += ".pdf"
+            output_path = Path(target_dir) / filename
+            try:
+                output_path.write_bytes(attachment.contenuto)
+                saved_files.append(str(output_path))
+            except OSError as err:
+                QMessageBox.critical(self, "Errore", f"Impossibile salvare {filename}: {err}")
+                return
+
+        QMessageBox.information(self, "Estrai allegati", f"Allegati salvati in:\n" + "\n".join(saved_files))
     
     def _format_invoice_html(self, invoice_data):
         html = f"""

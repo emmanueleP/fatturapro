@@ -29,6 +29,10 @@ class MenuManager:
         print_action.setShortcut("Ctrl+P")
         print_action.triggered.connect(self.main_window.print_invoice)
 
+        extract_attachments_action = file_menu.addAction("Estrai allegati")
+        extract_attachments_action.setShortcut("Ctrl+E")
+        extract_attachments_action.triggered.connect(self.main_window.extract_attachments)
+
         file_menu.addSeparator()
 
     def create_services_menu(self):
