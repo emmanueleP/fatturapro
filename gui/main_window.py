@@ -12,11 +12,10 @@ from utils.p7m_handler import P7MHandler
 from gui.info_dialog import InfoDialog
 from gui.settings_dialog import SettingsDialog
 from utils.pdf_layout import PDFLayout
-import pdfkit
 import os
 import sys
 import tempfile
-from utils.print_manager import PrintManager
+from utils.print_manager import PrintManager, html_to_pdf
 from utils.menu_manager import MenuManager  
 from gui.manual_dialog import ManualDialog  
 
@@ -28,6 +27,7 @@ class MainWindow(QMainWindow):
         self.current_invoice_data = None  
         self.current_file_is_p7m = False
         self.current_attachments = []
+        self.current_html = None
         self.p7m_handler = P7MHandler()
         
         # Inizializza le impostazioni
@@ -178,8 +178,14 @@ class MainWindow(QMainWindow):
             attachments_html = self._format_attachments_info(attachments)
             extra_sections = f"{signature_html}{attachments_html}"
             if extra_sections.strip():
-                html_content = html_content.replace('</body></html>', f'{extra_sections}</body></html>')
+                # Inserisce firma/allegati dentro il container, prima della chiusura del body
+                head, sep, tail = html_content.rpartition('</div>')
+                if sep:
+                    html_content = f"{head}{extra_sections}{sep}{tail}"
+                else:
+                    html_content = html_content.replace('</body>', f'{extra_sections}</body>')
             
+            self.current_html = html_content
             self.viewer.setHtml(html_content)
             
         except Exception as e:
@@ -489,67 +495,22 @@ class MainWindow(QMainWindow):
         
         if file_name:
             try:
-                # Genera il contenuto HTML
-                html_content = self.viewer.toHtml()
+                # Usa l'HTML originale (non quello rielaborato dal viewer)
+                html_content = self.current_html or PDFLayout().generate_invoice_html(self.current_invoice_data)
+                if not file_name.lower().endswith('.pdf'):
+                    file_name += '.pdf'
                 
-                # Trova il percorso di wkhtmltopdf
-                wkhtmltopdf_path = self._find_wkhtmltopdf()
-                
-                if not wkhtmltopdf_path:
-                    QMessageBox.critical(self, "Errore", 
-                        "wkhtmltopdf non trovato. Installalo da: https://wkhtmltopdf.org/downloads.html")
-                    return
-                
-                # Configura pdfkit per utilizzare wkhtmltopdf
-                config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
-                
-                # Genera il PDF
-                pdfkit.from_string(html_content, file_name, configuration=config, options={'quiet': ''})
+                # Genera il PDF con il motore nativo di Qt
+                html_to_pdf(html_content, file_name)
                 
                 QMessageBox.information(self, "Successo", f"PDF salvato come: {file_name}")
                 
             except Exception as e:
                 QMessageBox.critical(self, "Errore", f"Errore durante la creazione del PDF: {str(e)}")
     
-    def _find_wkhtmltopdf(self):
-        """Trova il percorso dell'eseguibile wkhtmltopdf."""
-        import subprocess
-        import shutil
-        
-        # Se l'app è in bundle, prova prima nella directory bin del bundle
-        if getattr(sys, 'frozen', False):
-            bundle_dir = sys._MEIPASS
-            bundle_path = os.path.join(bundle_dir, 'bin', 'wkhtmltopdf')
-            if os.path.exists(bundle_path) and os.access(bundle_path, os.X_OK):
-                return bundle_path
-        
-        # Prova nella directory bin locale (sviluppo)
-        local_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'bin', 'wkhtmltopdf')
-        if os.path.exists(local_path) and os.access(local_path, os.X_OK):
-            return local_path
-        
-        # Se non è nel bundle, prova a trovare wkhtmltopdf nel PATH del sistema
-        wkhtmltopdf_path = shutil.which('wkhtmltopdf')
-        if wkhtmltopdf_path:
-            return wkhtmltopdf_path
-        
-        # Se non è nel PATH, prova percorsi comuni su macOS
-        common_paths = [
-            '/usr/local/bin/wkhtmltopdf',
-            '/opt/homebrew/bin/wkhtmltopdf',
-            '/usr/bin/wkhtmltopdf'
-        ]
-        
-        for path in common_paths:
-            if os.path.exists(path) and os.access(path, os.X_OK):
-                return path
-        
-        return None
-    
     def print_invoice(self):
         if self.current_invoice_data:  # Verifica che ci siano dati da stampare
-            signature_html = None  # Qui puoi aggiungere il codice per la firma se necessario
-            self.print_manager.print_document(self.current_invoice_data, signature_html)
+            self.print_manager.print_document(self.current_invoice_data, self.current_html)
         else:
             QMessageBox.warning(self, "Attenzione", "Nessuna fattura caricata da stampare")
     

@@ -81,7 +81,7 @@ class InfoDialog(QDialog):
         <p><a href="https://github.com/emmanueleP/fatturapro">https://github.com/emmanueleP/fatturapro</a></p>
         
         <h3>Copyright:</h3>
-        <p>© 2025 Emmanuele Pani.</p>
+        <p>© 2026 Emmanuele Pani.</p>
         """
         
         # Browser con stile macOS

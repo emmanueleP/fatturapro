@@ -1,17 +1,91 @@
 import tempfile
 import os
 import sys
-import pdfkit
+from PyQt6.QtCore import QMarginsF, QEventLoop, QTimer, QUrl
 from PyQt6.QtPrintSupport import QPrinter, QPrintDialog
 from PyQt6.QtWidgets import QMessageBox
-from PyQt6.QtGui import QTextDocument, QPageSize
+from PyQt6.QtGui import QPageSize, QPageLayout
+# NB: QtWebEngineCore deve essere importato prima della creazione di QApplication
+from PyQt6.QtWebEngineCore import QWebEnginePage
 from utils.pdf_layout import PDFLayout
+
+# CSS aggiuntivo applicato solo in fase di stampa/PDF
+_PRINT_CSS = """
+<style>
+    @media print {
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        body { margin: 0 !important; font-size: 12px; }
+        .container { border: none !important; padding: 0 !important; max-width: none !important; }
+        .section { margin: 10px 0 !important; padding: 10px !important; }
+        .section h2 { break-after: avoid; page-break-after: avoid; }
+        .grid-container, tr, .info-group, .totali, .payment-info { break-inside: avoid; page-break-inside: avoid; }
+        thead { display: table-header-group; }
+        th, td { font-size: 11px !important; padding: 5px 6px !important; }
+        td { white-space: nowrap; }
+        td:first-child { white-space: normal; }
+    }
+</style>
+"""
+
+
+def html_to_pdf(html_content, pdf_path, timeout_ms=30000):
+    """Converte HTML in PDF con Qt WebEngine (Chromium, nativo arm64).
+
+    Supporta CSS moderno (grid, flex) e restituisce True se il PDF è stato creato.
+    """
+    if '</head>' in html_content:
+        html_content = html_content.replace('</head>', _PRINT_CSS + '</head>', 1)
+    else:
+        html_content = _PRINT_CSS + html_content
+
+    page = QWebEnginePage()
+    loop = QEventLoop()
+    state = {'ok': False, 'error': None}
+
+    page_layout = QPageLayout(
+        QPageSize(QPageSize.PageSizeId.A4),
+        QPageLayout.Orientation.Portrait,
+        QMarginsF(15, 15, 15, 15),
+        QPageLayout.Unit.Millimeter,
+    )
+
+    def on_load_finished(ok):
+        if not ok:
+            state['error'] = "Impossibile caricare il contenuto della fattura"
+            loop.quit()
+            return
+        page.printToPdf(pdf_path, page_layout)
+
+    def on_pdf_finished(_path, ok):
+        state['ok'] = ok
+        if not ok:
+            state['error'] = "Generazione del PDF non riuscita"
+        loop.quit()
+
+    def on_timeout():
+        state['error'] = "Timeout durante la generazione del PDF"
+        loop.quit()
+
+    page.loadFinished.connect(on_load_finished)
+    page.pdfPrintingFinished.connect(on_pdf_finished)
+    QTimer.singleShot(timeout_ms, on_timeout)
+
+    page.setHtml(html_content, QUrl("file:///"))
+    loop.exec()
+    page.loadFinished.disconnect()
+    page.pdfPrintingFinished.disconnect()
+    del page  # distrugge subito la pagina (evita warning sul profilo all'uscita)
+
+    if not state['ok']:
+        raise RuntimeError(state['error'] or "Errore sconosciuto nella generazione del PDF")
+    return True
+
 
 class PrintManager:
     def __init__(self, parent=None):
         self.parent = parent
 
-    def print_document(self, invoice_data, signature_html=None):
+    def print_document(self, invoice_data, html_content=None):
         """Gestisce il processo di stampa utilizzando il layout PDF"""
         if not invoice_data:
             QMessageBox.warning(self.parent, "Attenzione", "Nessuna fattura caricata da stampare")
@@ -19,7 +93,7 @@ class PrintManager:
 
         try:
             # Crea il PDF temporaneo usando il layout PDF
-            pdf_path = self.create_invoice_pdf(invoice_data)
+            pdf_path = self.create_invoice_pdf(invoice_data, html_content)
             
             if not pdf_path:
                 QMessageBox.critical(self.parent, "Errore", "Impossibile creare il PDF per la stampa")
@@ -50,43 +124,19 @@ class PrintManager:
                 except:
                     pass  # Ignora errori di pulizia
 
-    def create_invoice_pdf(self, invoice_data):
+    def create_invoice_pdf(self, invoice_data, html_content=None):
         """Crea il PDF della fattura usando il layout PDF"""
         try:
-            # Genera il contenuto HTML usando il layout PDF
-            pdf_layout = PDFLayout()
-            html_content = pdf_layout.generate_invoice_html(invoice_data)
-            
-            # Trova il percorso di wkhtmltopdf
-            wkhtmltopdf_path = self._find_wkhtmltopdf()
-            
-            if not wkhtmltopdf_path:
-                QMessageBox.critical(self.parent, "Errore", 
-                    "wkhtmltopdf non trovato. Installalo da: https://wkhtmltopdf.org/downloads.html")
-                return None
+            # Genera il contenuto HTML usando il layout PDF (se non già fornito)
+            if not html_content:
+                html_content = PDFLayout().generate_invoice_html(invoice_data)
             
             # Crea un file temporaneo per il PDF
             with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_file:
                 pdf_path = tmp_file.name
             
-            # Configura pdfkit per utilizzare wkhtmltopdf
-            config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
-            
-            # Opzioni per la stampa
-            options = {
-                'quiet': '',
-                'page-size': 'A4',
-                'margin-top': '20mm',
-                'margin-right': '20mm',
-                'margin-bottom': '20mm',
-                'margin-left': '20mm',
-                'encoding': 'UTF-8',
-                'no-outline': None,
-                'enable-local-file-access': None
-            }
-            
-            # Genera il PDF
-            pdfkit.from_string(html_content, pdf_path, configuration=config, options=options)
+            # Genera il PDF con il motore nativo di Qt
+            html_to_pdf(html_content, pdf_path)
             
             return pdf_path
             
@@ -131,41 +181,6 @@ class PrintManager:
                     
         except Exception as e:
             raise Exception(f"Errore durante l'invio alla stampante: {str(e)}")
-
-    def _find_wkhtmltopdf(self):
-        """Trova il percorso dell'eseguibile wkhtmltopdf."""
-        import subprocess
-        import shutil
-        
-        # Se l'app è in bundle, prova prima nella directory bin del bundle
-        if getattr(sys, 'frozen', False):
-            bundle_dir = sys._MEIPASS
-            bundle_path = os.path.join(bundle_dir, 'bin', 'wkhtmltopdf')
-            if os.path.exists(bundle_path) and os.access(bundle_path, os.X_OK):
-                return bundle_path
-        
-        # Prova nella directory bin locale (sviluppo)
-        local_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'bin', 'wkhtmltopdf')
-        if os.path.exists(local_path) and os.access(local_path, os.X_OK):
-            return local_path
-        
-        # Se non è nel bundle, prova a trovare wkhtmltopdf nel PATH del sistema
-        wkhtmltopdf_path = shutil.which('wkhtmltopdf')
-        if wkhtmltopdf_path:
-            return wkhtmltopdf_path
-        
-        # Se non è nel PATH, prova percorsi comuni su macOS
-        common_paths = [
-            '/usr/local/bin/wkhtmltopdf',
-            '/opt/homebrew/bin/wkhtmltopdf',
-            '/usr/bin/wkhtmltopdf'
-        ]
-        
-        for path in common_paths:
-            if os.path.exists(path) and os.access(path, os.X_OK):
-                return path
-        
-        return None
 
     def _open_pdf(self, pdf_path):
         """Apre il PDF con l'applicazione di default"""

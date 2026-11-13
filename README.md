@@ -17,8 +17,7 @@ FatturaPro è un visualizzatore di fatture elettroniche moderno e intuitivo per 
 ## Requisiti di Sistema
 
 - macOS 13 (Ventura) o superiore
-- Apple Silicon
-- wkhtmltopdf (per la generazione di PDF)
+- Apple Silicon (M1 o successivi) — i Mac Intel non sono supportati
 
 ## Installazione
 
@@ -28,21 +27,7 @@ FatturaPro è un visualizzatore di fatture elettroniche moderno e intuitivo per 
 2. Sposta FatturaPro nella cartella Applicazioni
 3. Al primo avvio, clicca con il tasto destro sull'icona e seleziona "Apri"
 
-### Installazione di wkhtmltopdf
-
-Per utilizzare la funzionalità di conversione in PDF, è necessario installare `wkhtmltopdf`:
-
-#### macOS (Raccomandato)
-```bash
-brew install wkhtmltopdf
-```
-
-#### Verifica dell'installazione
-```bash
-wkhtmltopdf --version
-```
-
-Per istruzioni dettagliate, consulta [INSTALL_WKHTMLTOPDF.md](INSTALL_WKHTMLTOPDF.md).
+La generazione dei PDF usa il motore nativo di Qt: non servono dipendenze esterne.
 
 ## Conformità Normativa
 
